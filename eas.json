@@ -1,0 +1,39 @@
+{
+  "cli": {
+    "version": ">= 18.7.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_MICROSOFT_TENANT_ID": "9b1d2116-2dff-4efa-89a3-465b62215224",
+        "EXPO_PUBLIC_MICROSOFT_CLIENT_ID": "8c5a2090-d63d-4ee2-a70f-327c4a641ff7",
+        "EXPO_PUBLIC_API_URL": "https://ridsmovilback-production.up.railway.app/api",
+        "EXPO_PUBLIC_INTRANET_API_URL": "https://rids-intranet-backend-production.up.railway.app/api"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_MICROSOFT_TENANT_ID": "9b1d2116-2dff-4efa-89a3-465b62215224",
+        "EXPO_PUBLIC_MICROSOFT_CLIENT_ID": "8c5a2090-d63d-4ee2-a70f-327c4a641ff7",
+        "EXPO_PUBLIC_API_URL": "https://ridsmovilback-production.up.railway.app/api",
+        "EXPO_PUBLIC_INTRANET_API_URL": "https://rids-intranet-backend-production.up.railway.app/api"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

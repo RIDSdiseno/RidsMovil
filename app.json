@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "RidsMovilExpo",
-    "slug": "RidsMovilExpo",
+    "name": "RIDS",
+    "slug": "rids-movil",
+    "owner": "diseno1",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,7 +10,30 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.diseno1.ridsmovil",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "location"
+        ]
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +43,15 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.diseno1.ridsmovil",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -38,11 +70,50 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "RIDS accede a tus fotos para que puedas adjuntar imágenes de los equipos y las entregas.",
+          "cameraPermission": "RIDS usa la cámara para que puedas fotografiar los equipos y las evidencias de entrega.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-video",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true,
+          "locationWhenInUsePermission": "RIDS usa tu ubicación para registrar el inicio de las visitas y validar tu posición durante el trabajo en terreno.",
+          "locationAlwaysAndWhenInUsePermission": "RIDS comparte tu ubicación con RIDS durante tu jornada laboral (lunes a viernes de 08:00 a 18:30 y sábados de 08:30 a 14:00) para coordinar las visitas asignadas, incluso con la aplicación minimizada o la pantalla bloqueada. Fuera de ese horario la app deja de registrar tu ubicación.",
+          "locationAlwaysPermission": "RIDS comparte tu ubicación con RIDS durante tu jornada laboral para coordinar las visitas asignadas, incluso con la aplicación minimizada o la pantalla bloqueada. Fuera de ese horario la app deja de registrar tu ubicación."
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "25a03dd6-22b1-4a9b-a3ca-f6c662d740a5"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/25a03dd6-22b1-4a9b-a3ca-f6c662d740a5"
     }
   }
 }
