@@ -1,12 +1,18 @@
-// Modo de captura de ubicación.
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+
+// Modo de captura de ubicación, resuelto en tiempo de ejecución según dónde
+// corre la app:
 //
-//   true  -> tarea en segundo plano (TaskManager) + foreground service en
-//            Android + permiso "Always" en iOS. Requiere una build nativa
-//            (TestFlight en iOS, APK/AAB custom en Android).
-//   false -> solo primer plano, sin permiso de background ni notificación
-//            persistente. Es el único modo que soporta Expo Go.
+//   Expo Go (storeClient) -> solo primer plano. Expo Go no puede registrar
+//                            tareas en segundo plano ni mostrar el foreground
+//                            service de Android, así que pedir background ahí
+//                            falla al iniciar el tracking.
+//   Build de EAS          -> segundo plano completo (TaskManager + foreground
+//                            service en Android + permiso "Always" en iOS).
 //
-// IMPORTANTE: para volver a probar en Expo Go hay que ponerlo en `false`, o la
-// app fallará al iniciar el tracking (Expo Go no registra tareas en segundo
-// plano). En builds de EAS debe quedar en `true`.
-export const BACKGROUND_LOCATION_ENABLED = true;
+// Se detecta en runtime y no con una bandera manual a propósito: el mismo
+// bundle de JS puede publicarse por OTA tanto al canal que usan los técnicos
+// en Expo Go como a las builds nativas. Con una bandera fija, cada publicación
+// rompía uno de los dos entornos según cómo estuviera puesta.
+export const BACKGROUND_LOCATION_ENABLED =
+  Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
