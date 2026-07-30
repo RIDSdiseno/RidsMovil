@@ -31,18 +31,40 @@ const HEARTBEAT_MS = 3 * 60 * 1000;
 const MIN_SILENCIO_MS = 2 * 60 * 1000;
 
 let timer: ReturnType<typeof setInterval> | null = null;
+let appStateSub: { remove: () => void } | null = null;
 
-export function startLocationHeartbeat() {
-  if (timer) return;
+function armarIntervalo() {
+  if (timer) clearInterval(timer);
   timer = setInterval(() => {
     void tick();
   }, HEARTBEAT_MS);
 }
 
+export function startLocationHeartbeat() {
+  if (timer) return;
+
+  armarIntervalo();
+
+  // iOS congela los timers de JS mientras la app está en segundo plano, y al
+  // volver no los "pone al día": simplemente reanuda lo que quedaba del
+  // intervalo. Sin esto, justo cuando el técnico retoma la app —el momento en
+  // que más interesa verlo reportando— podían pasar hasta 3 minutos más de
+  // silencio. Se late de inmediato y se reinicia el ciclo desde ahí.
+  appStateSub = AppState.addEventListener('change', (siguiente) => {
+    if (siguiente !== 'active') return;
+    armarIntervalo();
+    void tick();
+  });
+}
+
 export function stopLocationHeartbeat() {
-  if (!timer) return;
-  clearInterval(timer);
-  timer = null;
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+
+  appStateSub?.remove();
+  appStateSub = null;
 }
 
 async function tick() {
