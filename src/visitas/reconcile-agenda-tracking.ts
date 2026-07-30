@@ -8,6 +8,7 @@ import {
   AgendaTrackingContext,
   saveAgendaTrackingContext,
 } from './tracking-context';
+import { startLocationHeartbeat } from './location-heartbeat';
 import { loadVisitaState } from './visita-state';
 import { appendTrackingEvent } from './tracking-log';
 import { finalizarVisitaAsignada } from '@/src/api/rids';
@@ -155,6 +156,7 @@ async function runReconciliation(
 
   if (tracking.active) {
     await saveAgendaTrackingContext(context);
+    startLocationHeartbeat();
     return { status: 'active', agendaId: context.agendaId! };
   }
 

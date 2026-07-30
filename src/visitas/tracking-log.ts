@@ -21,6 +21,7 @@ export type TrackingEventType =
   | 'reconcile-agenda'
   | 'reconcile-daily'
   | 'flush'
+  | 'heartbeat'
   | 'permiso';
 
 export type TrackingEvent = {

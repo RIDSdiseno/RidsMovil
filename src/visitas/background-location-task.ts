@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
 import { getStoredToken } from '@/src/api/client';
+import { buildQueuePayload, isFreshLocation, isValidLocationSample } from './location-sample';
 import {
   enqueueLocation,
   flushPendingLocations,
@@ -16,26 +17,9 @@ import { appendTrackingEvent } from './tracking-log';
 
 export const AGENDA_LOCATION_TASK = 'rids-agenda-background-location';
 
-// Antigüedad máxima aceptada para una lectura de ubicación. Android puede
-// devolver una posición en caché (por red/GPS anterior) cuando no hay señal
-// GPS directa (p. ej. dentro de un edificio), en vez de una lectura fresca.
-// Sin este filtro, esa ubicación vieja se enviaba como si fuera la posición
-// actual del técnico.
-const MAX_LOCATION_AGE_MS = 3 * 60 * 1000;
-
 type LocationTaskData = {
   locations?: Location.LocationObject[];
 };
-
-function isValidLocation(location: Location.LocationObject) {
-  const { latitude, longitude } = location.coords;
-  return Number.isFinite(latitude) && Number.isFinite(longitude);
-}
-
-function isFreshLocation(location: Location.LocationObject) {
-  if (!Number.isFinite(location.timestamp)) return true;
-  return Date.now() - location.timestamp <= MAX_LOCATION_AGE_MS;
-}
 
 TaskManager.defineTask<LocationTaskData>(AGENDA_LOCATION_TASK, async ({ data, error }) => {
   if (error) {
@@ -61,21 +45,11 @@ TaskManager.defineTask<LocationTaskData>(AGENDA_LOCATION_TASK, async ({ data, er
   if (locations.length === 0) return;
 
   for (const location of locations) {
-    if (!isValidLocation(location)) continue;
+    if (!isValidLocationSample(location)) continue;
     if (!isFreshLocation(location)) continue;
 
     try {
-      const { latitude, longitude, accuracy, speed } = location.coords;
-      await enqueueLocation({
-        agendaId: context.agendaId,
-        tecnicoId: context.tecnicoId ?? null,
-        latitud: latitude,
-        longitud: longitude,
-        precision: typeof accuracy === 'number' ? accuracy : null,
-        velocidad: typeof speed === 'number' ? speed : null,
-        estadoTracking: context.estadoTracking,
-        capturedAt: new Date(location.timestamp || Date.now()).toISOString(),
-      });
+      await enqueueLocation(buildQueuePayload(location, context));
     } catch (queueError) {
       await updateAgendaTrackingContext({
         lastError: queueError instanceof Error

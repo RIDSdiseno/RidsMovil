@@ -2,6 +2,8 @@ import * as Location from 'expo-location';
 
 import { AGENDA_LOCATION_TASK } from './background-location-task';
 import { isWithinDailyTrackingWindow } from './daily-tracking-window';
+import { startLocationHeartbeat, stopLocationHeartbeat } from './location-heartbeat';
+import { buildQueuePayload, isFreshLocation, isValidLocationSample } from './location-sample';
 import { enqueueLocation, flushPendingLocationsForCurrentSession } from './offline-location-queue';
 import { appendTrackingEvent } from './tracking-log';
 import {
@@ -12,8 +14,6 @@ import {
   updateAgendaTrackingContext,
 } from './tracking-context';
 import { BACKGROUND_LOCATION_ENABLED } from './tracking-mode';
-
-const MAX_LOCATION_AGE_MS = 3 * 60 * 1000;
 
 let foregroundWatch: Location.LocationSubscription | null = null;
 
@@ -88,16 +88,6 @@ async function hasNativeTaskStarted() {
   return Location.hasStartedLocationUpdatesAsync(AGENDA_LOCATION_TASK).catch(() => false);
 }
 
-function isFreshLocation(location: Location.LocationObject) {
-  if (!Number.isFinite(location.timestamp)) return true;
-  return Date.now() - location.timestamp <= MAX_LOCATION_AGE_MS;
-}
-
-function isValidLocationSample(location: Location.LocationObject) {
-  const { latitude, longitude } = location.coords;
-  return Number.isFinite(latitude) && Number.isFinite(longitude);
-}
-
 async function handleForegroundLocationSample(location: Location.LocationObject) {
   const context = await getAgendaTrackingContext();
   if (!context) return;
@@ -110,17 +100,7 @@ async function handleForegroundLocationSample(location: Location.LocationObject)
   if (!isValidLocationSample(location) || !isFreshLocation(location)) return;
 
   try {
-    const { latitude, longitude, accuracy, speed } = location.coords;
-    await enqueueLocation({
-      agendaId: context.agendaId,
-      tecnicoId: context.tecnicoId ?? null,
-      latitud: latitude,
-      longitud: longitude,
-      precision: typeof accuracy === 'number' ? accuracy : null,
-      velocidad: typeof speed === 'number' ? speed : null,
-      estadoTracking: context.estadoTracking,
-      capturedAt: new Date(location.timestamp || Date.now()).toISOString(),
-    });
+    await enqueueLocation(buildQueuePayload(location, context));
   } catch (queueError) {
     await updateAgendaTrackingContext({
       lastError: queueError instanceof Error
@@ -290,6 +270,9 @@ async function startAgendaLocationTrackingInternal(context: AgendaTrackingContex
       startedAt: current.context.startedAt || context.startedAt,
     };
     await saveAgendaTrackingContext(nextContext);
+    // El tracking ya estaba corriendo (reinicio de la app): el latido no pasa
+    // por el camino de arranque, así que hay que asegurarlo aquí.
+    startLocationHeartbeat();
     setState({
       agendaId: nextContext.agendaId,
       isTracking: true,
@@ -319,9 +302,12 @@ async function startAgendaLocationTrackingInternal(context: AgendaTrackingContex
       await Location.startLocationUpdatesAsync(AGENDA_LOCATION_TASK, {
         accuracy: Location.Accuracy.Balanced,
         activityType: Location.ActivityType.AutomotiveNavigation,
-        deferredUpdatesDistance: 100,
-        deferredUpdatesInterval: 60_000,
-        distanceInterval: 75,
+        // Sin `deferredUpdates`: en iOS acumulaban los puntos hasta los 100 m
+        // antes de entregarlos y además están obsoletos desde iOS 13.
+        // `timeInterval` solo aplica en Android; en iOS el único filtro real es
+        // la distancia, por eso se baja de 75 a 25 m. La vitalidad del técnico
+        // detenido la cubre el latido (location-heartbeat), no este filtro.
+        distanceInterval: 25,
         foregroundService: {
           killServiceOnDestroy: false,
           notificationBody: 'Tu ubicación se está enviando mientras realizas la ruta.',
@@ -359,6 +345,7 @@ async function startAgendaLocationTrackingInternal(context: AgendaTrackingContex
     throw error;
   }
 
+  startLocationHeartbeat();
   void appendTrackingEvent('start', nextContext.agendaId, nextContext.estadoTracking);
 
   setState({
@@ -386,6 +373,8 @@ export async function stopAgendaLocationTracking() {
 
 async function stopAgendaLocationTrackingInternal() {
   if (startOperation) await startOperation.promise.catch(() => undefined);
+
+  stopLocationHeartbeat();
 
   const contextoPrevio = await getAgendaTrackingContext().catch(() => null);
   void appendTrackingEvent('stop', contextoPrevio?.agendaId ?? null);

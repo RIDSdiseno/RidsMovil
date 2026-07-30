@@ -5,6 +5,7 @@ import {
   stopAgendaLocationTracking,
 } from './location-tracking';
 import { isWithinDailyTrackingWindow } from './daily-tracking-window';
+import { startLocationHeartbeat } from './location-heartbeat';
 import { appendTrackingEvent } from './tracking-log';
 
 export type DailyTrackingReconciliation =
@@ -72,6 +73,9 @@ async function runReconciliation(
   }
 
   if (tracking.active && isDailyContext) {
+    // Reapertura de la app con el seguimiento ya corriendo: el latido vive en
+    // memoria del proceso, así que se relanza (es idempotente).
+    startLocationHeartbeat();
     return { status: 'active' };
   }
 
