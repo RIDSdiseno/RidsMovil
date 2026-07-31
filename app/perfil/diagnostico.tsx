@@ -14,7 +14,7 @@ import {
   inspectQueueHealth,
   OfflineLocationQueueHealth,
 } from '@/src/visitas/offline-location-queue';
-import { BACKGROUND_LOCATION_ENABLED } from '@/src/visitas/tracking-mode';
+import { BACKGROUND_LOCATION_SUPPORTED } from '@/src/visitas/tracking-mode';
 import {
   clearTrackingLog,
   formatTrackingLog,
@@ -31,6 +31,8 @@ type Estado = {
   agendaId: number | null;
   inconsistencia: string | null;
   permisos: string;
+  modo: string;
+  degradado: boolean;
   cola: OfflineLocationQueueHealth | null;
 };
 
@@ -49,11 +51,25 @@ export default function DiagnosticoScreen() {
         getTrackingLog(),
       ]);
 
+      // El modo efectivo depende del permiso concedido, no solo del binario:
+      // con "Al usar la app" la captura queda limitada a primer plano.
+      const soloPrimerPlano = permisos.granted && permisos.modo === 'foreground';
+
       setEstado({
         activo: tracking.active,
         agendaId: tracking.context?.agendaId ?? null,
         inconsistencia: tracking.inconsistency,
-        permisos: permisos.granted ? 'Concedidos' : `Faltan (${permisos.reason})`,
+        permisos: permisos.granted
+          ? soloPrimerPlano
+            ? 'Solo "Al usar la app"'
+            : 'Siempre'
+          : `Faltan (${permisos.reason})`,
+        modo: !BACKGROUND_LOCATION_SUPPORTED
+          ? 'Expo Go (solo primer plano)'
+          : soloPrimerPlano
+            ? 'Solo primer plano'
+            : 'Segundo plano',
+        degradado: soloPrimerPlano,
         cola,
       });
       setEventos(log);
@@ -68,7 +84,7 @@ export default function DiagnosticoScreen() {
 
   async function compartir() {
     const encabezado = [
-      `Modo: ${BACKGROUND_LOCATION_ENABLED ? 'segundo plano' : 'solo primer plano'}`,
+      `Modo: ${estado?.modo ?? '—'}`,
       `Tracking activo: ${estado?.activo ? 'sí' : 'no'}`,
       `Contexto: ${estado?.agendaId === null ? 'jornada' : `agenda ${estado?.agendaId}`}`,
       `Inconsistencia: ${estado?.inconsistencia ?? 'ninguna'}`,
@@ -107,13 +123,13 @@ export default function DiagnosticoScreen() {
       </Text>
 
       <View style={styles.card}>
-        <Fila etiqueta="Modo" valor={BACKGROUND_LOCATION_ENABLED ? 'Segundo plano' : 'Solo primer plano'} />
+        <Fila etiqueta="Modo" valor={estado?.modo ?? '—'} destacar={estado?.degradado} />
         <Fila etiqueta="Tracking activo" valor={estado?.activo ? 'Sí' : 'No'} destacar={!estado?.activo} />
         <Fila
           etiqueta="Contexto"
           valor={estado?.agendaId === null ? 'Jornada laboral' : `Agenda ${estado?.agendaId}`}
         />
-        <Fila etiqueta="Permisos" valor={estado?.permisos ?? '—'} destacar={!estado?.permisos?.startsWith('Conce')} />
+        <Fila etiqueta="Permisos" valor={estado?.permisos ?? '—'} destacar={estado?.permisos?.startsWith('Faltan')} />
         <Fila etiqueta="Dentro de jornada" valor={isWithinDailyTrackingWindow() ? 'Sí' : 'No'} />
         {estado?.inconsistencia ? (
           <Fila etiqueta="Inconsistencia" valor={estado.inconsistencia} destacar />

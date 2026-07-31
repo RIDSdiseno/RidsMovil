@@ -1,7 +1,9 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 
-// Modo de captura de ubicación, resuelto en tiempo de ejecución según dónde
-// corre la app:
+// Capacidad del entorno: si esta build puede usar ubicación en segundo plano.
+// Es una propiedad del binario, no del permiso: que el sistema lo soporte no
+// significa que el técnico lo haya concedido. El modo efectivo se resuelve en
+// location-tracking según los permisos reales.
 //
 //   Expo Go (storeClient) -> solo primer plano. Expo Go no puede registrar
 //                            tareas en segundo plano ni mostrar el foreground
@@ -14,5 +16,5 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 // bundle de JS puede publicarse por OTA tanto al canal que usan los técnicos
 // en Expo Go como a las builds nativas. Con una bandera fija, cada publicación
 // rompía uno de los dos entornos según cómo estuviera puesta.
-export const BACKGROUND_LOCATION_ENABLED =
+export const BACKGROUND_LOCATION_SUPPORTED =
   Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;

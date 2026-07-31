@@ -13,7 +13,7 @@ import {
   saveAgendaTrackingContext,
   updateAgendaTrackingContext,
 } from './tracking-context';
-import { BACKGROUND_LOCATION_ENABLED } from './tracking-mode';
+import { BACKGROUND_LOCATION_SUPPORTED } from './tracking-mode';
 
 let foregroundWatch: Location.LocationSubscription | null = null;
 
@@ -24,12 +24,17 @@ type TrackingState = {
   lastSentAt: string | null;
 };
 
+// Modo efectivo de captura. Depende del binario Y del permiso concedido: una
+// build nativa con permiso "Al usar la app" solo puede capturar en primer
+// plano, y eso es mucho mejor que no capturar nada.
+export type TrackingMode = 'background' | 'foreground';
+
 export type AgendaLocationPermissionResult =
-  | { granted: true }
+  | { granted: true; modo: TrackingMode }
   | {
       canAskAgain: boolean;
       granted: false;
-      reason: 'foreground-denied' | 'background-denied' | 'settings-required';
+      reason: 'foreground-denied' | 'settings-required';
     };
 
 export type AgendaLocationTrackingStatus = {
@@ -72,19 +77,17 @@ function isValidAgendaId(value: unknown): value is number | null {
   return value === null || isPositiveInteger(value);
 }
 
-function permissionDeniedResult(
-  reason: 'foreground-denied' | 'background-denied',
-  canAskAgain: boolean,
-): AgendaLocationPermissionResult {
+function permissionDeniedResult(canAskAgain: boolean): AgendaLocationPermissionResult {
   return {
     canAskAgain,
     granted: false,
-    reason: canAskAgain ? reason : 'settings-required',
+    reason: canAskAgain ? 'foreground-denied' : 'settings-required',
   };
 }
 
 async function hasNativeTaskStarted() {
-  if (!BACKGROUND_LOCATION_ENABLED) return foregroundWatch !== null;
+  if (foregroundWatch !== null) return true;
+  if (!BACKGROUND_LOCATION_SUPPORTED) return false;
   return Location.hasStartedLocationUpdatesAsync(AGENDA_LOCATION_TASK).catch(() => false);
 }
 
@@ -144,45 +147,42 @@ export async function ensureAgendaLocationPermissions(
   }
 
   if (foreground.status !== Location.PermissionStatus.GRANTED) {
-    return permissionDeniedResult('foreground-denied', foreground.canAskAgain);
+    return permissionDeniedResult(foreground.canAskAgain);
   }
 
-  if (!BACKGROUND_LOCATION_ENABLED) {
-    return { granted: true };
+  if (!BACKGROUND_LOCATION_SUPPORTED) {
+    return { granted: true, modo: 'foreground' };
   }
 
   let background = await Location.getBackgroundPermissionsAsync();
 
-  if (background.status !== Location.PermissionStatus.GRANTED) {
-    if (!background.canAskAgain) {
-      return permissionDeniedResult('background-denied', false);
-    }
-
+  if (background.status !== Location.PermissionStatus.GRANTED && background.canAskAgain) {
     const shouldRequest = options.beforeRequestBackground
       ? await options.beforeRequestBackground()
       : true;
 
-    if (!shouldRequest) {
-      return permissionDeniedResult('background-denied', true);
+    if (shouldRequest) {
+      background = await Location.requestBackgroundPermissionsAsync();
     }
-
-    background = await Location.requestBackgroundPermissionsAsync();
   }
 
-  if (background.status !== Location.PermissionStatus.GRANTED) {
-    return permissionDeniedResult('background-denied', background.canAskAgain);
-  }
-
-  return { granted: true };
+  // Sin permiso "Siempre" NO se aborta: iOS ofrece "Al usar la app" como
+  // primera opción y muchos técnicos se quedan ahí. Antes eso dejaba al
+  // técnico sin reportar absolutamente nada; ahora se captura en primer plano,
+  // que con el latido cada 3 minutos cubre la jornada mientras usa la app.
+  return {
+    granted: true,
+    modo: background.status === Location.PermissionStatus.GRANTED ? 'background' : 'foreground',
+  };
 }
 
 export async function checkAgendaLocationPermissions(): Promise<AgendaLocationPermissionResult> {
-  if (!BACKGROUND_LOCATION_ENABLED) {
+  if (!BACKGROUND_LOCATION_SUPPORTED) {
     const foreground = await Location.getForegroundPermissionsAsync();
     if (foreground.status !== Location.PermissionStatus.GRANTED) {
-      return permissionDeniedResult('foreground-denied', foreground.canAskAgain);
+      return permissionDeniedResult(foreground.canAskAgain);
     }
-    return { granted: true };
+    return { granted: true, modo: 'foreground' };
   }
 
   const [foreground, background] = await Promise.all([
@@ -191,14 +191,13 @@ export async function checkAgendaLocationPermissions(): Promise<AgendaLocationPe
   ]);
 
   if (foreground.status !== Location.PermissionStatus.GRANTED) {
-    return permissionDeniedResult('foreground-denied', foreground.canAskAgain);
+    return permissionDeniedResult(foreground.canAskAgain);
   }
 
-  if (background.status !== Location.PermissionStatus.GRANTED) {
-    return permissionDeniedResult('background-denied', background.canAskAgain);
-  }
-
-  return { granted: true };
+  return {
+    granted: true,
+    modo: background.status === Location.PermissionStatus.GRANTED ? 'background' : 'foreground',
+  };
 }
 
 export async function isAgendaLocationTrackingActive(): Promise<AgendaLocationTrackingStatus> {
@@ -249,9 +248,7 @@ async function startAgendaLocationTrackingInternal(context: AgendaTrackingContex
   if (!permissions.granted) {
     const message = permissions.reason === 'settings-required'
       ? 'Activa los permisos de ubicación desde Configuración para compartir tu ruta.'
-      : permissions.reason === 'foreground-denied'
-        ? 'Activa el permiso de ubicación para compartir tu ruta.'
-        : 'Activa el permiso de ubicación en segundo plano para compartir tu ruta.';
+      : 'Activa el permiso de ubicación para compartir tu ruta.';
 
     setState({
       agendaId: null,
@@ -298,7 +295,7 @@ async function startAgendaLocationTrackingInternal(context: AgendaTrackingContex
   await saveAgendaTrackingContext(nextContext);
 
   try {
-    if (BACKGROUND_LOCATION_ENABLED) {
+    if (permissions.modo === 'background') {
       await Location.startLocationUpdatesAsync(AGENDA_LOCATION_TASK, {
         accuracy: Location.Accuracy.Balanced,
         activityType: Location.ActivityType.AutomotiveNavigation,
@@ -379,13 +376,18 @@ async function stopAgendaLocationTrackingInternal() {
   const contextoPrevio = await getAgendaTrackingContext().catch(() => null);
   void appendTrackingEvent('stop', contextoPrevio?.agendaId ?? null);
 
-  if (!BACKGROUND_LOCATION_ENABLED) {
-    foregroundWatch?.remove();
-    foregroundWatch = null;
-  } else {
-    const active = await hasNativeTaskStarted();
-    if (active) {
-      await Location.stopLocationUpdatesAsync(AGENDA_LOCATION_TASK);
+  // Se detienen los dos caminos: el técnico pudo haber arrancado en segundo
+  // plano y luego bajar el permiso a "Al usar la app" (o al revés), así que no
+  // se puede asumir cuál está corriendo.
+  foregroundWatch?.remove();
+  foregroundWatch = null;
+
+  if (BACKGROUND_LOCATION_SUPPORTED) {
+    const tareaActiva = await Location
+      .hasStartedLocationUpdatesAsync(AGENDA_LOCATION_TASK)
+      .catch(() => false);
+    if (tareaActiva) {
+      await Location.stopLocationUpdatesAsync(AGENDA_LOCATION_TASK).catch(() => undefined);
     }
   }
 

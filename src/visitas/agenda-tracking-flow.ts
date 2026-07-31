@@ -59,15 +59,11 @@ export async function ensureAgendaTrackingReady(): Promise<TrackingReadiness> {
     };
   }
 
-  if (permissions.reason === 'foreground-denied') {
-    return {
-      message: 'Para iniciar la ruta debes permitir el acceso a tu ubicación.',
-      ready: false,
-    };
-  }
-
+  // Falta el permiso de segundo plano ya no bloquea: ensureAgendaLocationPermissions
+  // devuelve `granted` con modo 'foreground' y el seguimiento arranca igual.
+  // Solo se llega acá si el técnico negó la ubicación por completo.
   return {
-    message: 'Para iniciar la ruta debes permitir la ubicación en segundo plano.',
+    message: 'Para iniciar la ruta debes permitir el acceso a tu ubicación.',
     ready: false,
   };
 }

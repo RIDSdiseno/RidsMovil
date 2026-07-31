@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { BACKGROUND_LOCATION_ENABLED } from './tracking-mode';
+import { BACKGROUND_LOCATION_SUPPORTED } from './tracking-mode';
 
 // Bitácora local de las transiciones del tracking. Existe para diagnosticar el
 // comportamiento en segundo plano: ahí el técnico no está mirando la app y no
@@ -29,7 +29,7 @@ export type TrackingEvent = {
   evento: TrackingEventType;
   agendaId: number | null;
   detalle?: string;
-  modo: 'background' | 'foreground';
+  entorno: 'build-nativa' | 'expo-go';
 };
 
 let writeTail: Promise<void> = Promise.resolve();
@@ -69,7 +69,7 @@ export function appendTrackingEvent(
     evento,
     agendaId,
     detalle: detalle ? detalle.slice(0, 200) : undefined,
-    modo: BACKGROUND_LOCATION_ENABLED ? 'background' : 'foreground',
+    entorno: BACKGROUND_LOCATION_SUPPORTED ? 'build-nativa' : 'expo-go',
   };
 
   writeTail = writeTail
@@ -108,7 +108,7 @@ export function formatTrackingLog(events: readonly TrackingEvent[]) {
       const hora = new Date(event.at).toLocaleString('es-CL', { timeZone: 'America/Santiago' });
       const agenda = event.agendaId === null ? 'jornada' : `agenda ${event.agendaId}`;
       const detalle = event.detalle ? ` — ${event.detalle}` : '';
-      return `[${hora}] ${event.evento} (${agenda}, ${event.modo})${detalle}`;
+      return `[${hora}] ${event.evento} (${agenda}, ${event.entorno})${detalle}`;
     })
     .join('\n');
 }
