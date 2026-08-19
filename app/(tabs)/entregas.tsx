@@ -283,9 +283,11 @@ export default function EntregasScreen() {
           </Text>
 
           <FlatList
+            columnWrapperStyle={styles.companyRow}
             contentContainerStyle={styles.companyList}
             data={filteredEmpresas}
             keyExtractor={(empresa) => `${empresa.origen ?? 'RIDS'}:${empresa.id_empresa}`}
+            numColumns={2}
             refreshControl={
               <RefreshControl colors={[colors.brand]} onRefresh={refreshScreen} refreshing={refreshing} tintColor={colors.brand} />
             }
@@ -309,8 +311,10 @@ export default function EntregasScreen() {
                     <Ionicons color="#B7C0CE" name="chevron-forward" size={18} />
                   )}
                 </View>
-                <Text style={styles.companyTitle}>{empresa.nombre}</Text>
-                <Text style={styles.companySubtitle}>{empresa.detalleEmpresa?.rut ? `RUT ${empresa.detalleEmpresa.rut}` : 'RUT no registrado'}</Text>
+                <Text numberOfLines={2} style={styles.companyTitle}>{empresa.nombre}</Text>
+                <Text numberOfLines={1} style={styles.companySubtitle}>
+                  {empresa.detalleEmpresa?.rut ? `RUT ${empresa.detalleEmpresa.rut}` : 'RUT no registrado'}
+                </Text>
               </Pressable>
             )}
             scrollIndicatorInsets={{ bottom: 150 }}
@@ -543,11 +547,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   companyList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
     paddingBottom: 190,
     paddingTop: 18,
+  },
+  companyRow: {
+    justifyContent: 'space-between',
   },
   companyScroll: {
     flex: 1,
@@ -558,9 +563,9 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: 20,
     borderWidth: 1,
-    minHeight: 138,
+    minHeight: 148,
     padding: 14,
-    width: '47.8%',
+    width: '48.5%',
     ...shadow,
   },
   companyCardSelected: {
@@ -574,7 +579,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   companyIcon: {
     alignItems: 'center',
@@ -594,13 +599,19 @@ const styles = StyleSheet.create({
   },
   companyTitle: {
     color: colors.ink,
-    fontSize: 15,
+    // Los nombres de Econnet se guardan en mayusculas y son mas anchos, asi
+    // que se acota el cuerpo y se limita a dos lineas para que todas las
+    // tarjetas midan lo mismo.
+    fontSize: 14,
     fontWeight: '900',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   companySubtitle: {
     color: colors.muted,
     fontSize: 12,
-    marginTop: 8,
+    // Ancla el RUT al pie: el titulo ocupa una o dos lineas segun la empresa y
+    // sin esto quedaba a distinta altura en cada tarjeta.
+    marginTop: 'auto',
+    paddingTop: 8,
   },
 });
