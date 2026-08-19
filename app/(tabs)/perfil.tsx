@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '@/src/components/AppButton';
 import { Screen } from '@/src/components/Screen';
@@ -56,7 +56,9 @@ export default function PerfilScreen() {
   }
 
   return (
-    <Screen>
+    // scroll={false}: la cabecera y la tarjeta del técnico quedan fijas y solo
+    // se desplaza la lista de accesos de abajo.
+    <Screen scroll={false}>
       <Text style={styles.title}>Perfil</Text>
       <Text style={styles.subtitle}>Sesion activa del tecnico.</Text>
 
@@ -70,7 +72,10 @@ export default function PerfilScreen() {
         <AppButton loading={signingOut} onPress={handleSignOut} title="Cerrar sesion" variant="secondary" />
       </View>
 
-      <View style={styles.historyActions}>
+      <ScrollView
+        contentContainerStyle={styles.historyActions}
+        showsVerticalScrollIndicator={false}
+        style={styles.historyScroll}>
         <HistoryButton
           icon="calendar-outline"
           onPress={() => router.push('/agenda')}
@@ -91,7 +96,7 @@ export default function PerfilScreen() {
           onPress={() => router.push('/perfil/diagnostico')}
           title="Diagnostico de ubicacion"
         />
-      </View>
+      </ScrollView>
     </Screen>
   );
 }
@@ -160,9 +165,14 @@ const styles = StyleSheet.create({
     marginVertical: 22,
     width: '100%',
   },
+  historyScroll: {
+    // Ocupa el alto restante bajo la tarjeta fija; es la única zona que scrollea.
+    flex: 1,
+    marginTop: 20,
+  },
   historyActions: {
     gap: 12,
-    marginTop: 20,
+    paddingBottom: 24,
   },
   historyButton: {
     alignItems: 'center',
