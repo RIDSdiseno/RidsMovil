@@ -4,7 +4,6 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { getMisVisitasAsignadasHoy, iniciarRutaVisitaAsignada, iniciarVisitaAsignada } from '@/src/api/rids';
-import { InfoCard } from '@/src/components/InfoCard';
 import { Screen } from '@/src/components/Screen';
 import { useAuth } from '@/src/auth/AuthContext';
 import { loadEntregaState } from '@/src/entregas/entrega-state';
@@ -353,24 +352,6 @@ export default function DashboardScreen() {
           />
         ))}
       </View>
-
-      <Text style={[styles.sectionTitle, styles.quickAccessTitle]}>Accesos rapidos</Text>
-      <View style={styles.grid}>
-        <InfoCard
-          icon={<Ionicons color={colors.accent} name="hardware-chip-outline" size={24} />}
-          onPress={() => router.push('/(tabs)/equipos')}
-          subtitle="Buscar equipos y actualizar datos de hardware."
-          title="Equipos"
-          tone="success"
-        />
-        <InfoCard
-          icon={<Ionicons color={colors.warning} name="cube-outline" size={24} />}
-          onPress={() => router.push('/(tabs)/entregas')}
-          subtitle="Seleccionar empresa, receptor, foto y firma."
-          title="PickUP"
-          tone="warning"
-        />
-      </View>
     </Screen>
   );
 }
@@ -574,9 +555,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginBottom: 14,
   },
-  grid: {
-    gap: 14,
-  },
   agendaBlock: {
     gap: 12,
   },
@@ -697,8 +675,5 @@ const styles = StyleSheet.create({
     color: '#047857',
     fontSize: 11,
     fontWeight: '900',
-  },
-  quickAccessTitle: {
-    marginTop: 10,
   },
 });
