@@ -1,19 +1,20 @@
+// app/(tabs)/index.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { getMisVisitasAsignadasHoy, iniciarRutaVisitaAsignada, iniciarVisitaAsignada } from '@/src/api/rids';
-import { Screen } from '@/src/components/Screen';
 import { useAuth } from '@/src/auth/AuthContext';
+import { Screen } from '@/src/components/Screen';
 import { loadEntregaState } from '@/src/entregas/entrega-state';
 import { loadEquipoState } from '@/src/equipos/equipo-state';
 import { loadGestionarEquipoState } from '@/src/equipos/gestionar-state';
 import { colors, shadow } from '@/src/theme/colors';
 import { VisitaAsignada } from '@/src/types/api';
+import { getAgendaCardAction } from '@/src/visitas/agenda-card-action';
 import { reconcileTrackingForAssignedAgendas } from '@/src/visitas/agenda-tracking-flow';
 import { reconcileDailyLocationTracking } from '@/src/visitas/daily-location-tracking';
-import { getAgendaCardAction } from '@/src/visitas/agenda-card-action';
 import { startVisitForEmpresa } from '@/src/visitas/start-visit-flow';
 import { formatDistanceMeters, getDistanceFromCurrentLocation } from '@/src/visitas/visit-distance';
 import { loadVisitaState } from '@/src/visitas/visita-state';

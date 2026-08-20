@@ -10,7 +10,6 @@ import { AppButton } from '@/src/components/AppButton';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { EditableSelect } from '@/src/components/EditableSelect';
 import { Screen } from '@/src/components/Screen';
-import { clearEquipoState, EquipoNuevoState, loadEquipoState } from '@/src/equipos/equipo-state';
 import {
   ESTADO_EQUIPO_OPTIONS,
   MARCAS_SUGERIDAS,
@@ -20,6 +19,7 @@ import {
   TIPO_EQUIPO_OPTIONS,
   TIPOS_SIN_ESPECIFICACIONES,
 } from '@/src/equipos/equipo-opciones';
+import { clearEquipoState, EquipoNuevoState, loadEquipoState } from '@/src/equipos/equipo-state';
 import { colors, shadow } from '@/src/theme/colors';
 import { getSolicitanteId } from '@/src/visitas/visita-utils';
 
@@ -42,6 +42,7 @@ type EquipoForm = {
   disco: string;
   propiedad: PropiedadEquipo;
   propietarioExterno: string;
+  observaciones: string;
   macWifi: string;
   redEthernet: string;
   so: string;
@@ -71,6 +72,7 @@ const initialForm: EquipoForm = {
   ram: '',
   disco: '',
   propiedad: 'Empresa',
+  observaciones: '',
   propietarioExterno: '',
   macWifi: '',
   redEthernet: '',
@@ -190,6 +192,7 @@ export default function AgregarEquipoFormularioScreen() {
         disco: form.disco.trim(),
         propiedad: form.propiedad,
         propietarioExterno: form.propiedad === 'Externo' ? form.propietarioExterno.trim() : undefined,
+        observaciones: form.observaciones.trim() || null,
         macWifi: form.macWifi.trim(),
         redEthernet: form.redEthernet.trim(),
         so: form.so.trim(),
@@ -209,8 +212,13 @@ export default function AgregarEquipoFormularioScreen() {
       });
 
       await clearEquipoState();
-      router.replace('/(tabs)');
-      Alert.alert('Equipo', `Equipo creado para ${equipoState.solicitante.nombre}.`);
+
+      router.replace('/equipos/gestionar');
+
+      Alert.alert(
+        'Equipo',
+        `Equipo creado para ${equipoState.solicitante.nombre}.`,
+      );
     } catch (error) {
       Alert.alert('Equipo', error instanceof Error ? error.message : 'No se pudo crear el equipo.');
     } finally {
@@ -334,6 +342,25 @@ export default function AgregarEquipoFormularioScreen() {
             value={form.propietarioExterno}
           />
         )}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Observaciones</Text>
+
+          <TextInput
+            multiline
+            maxLength={1000}
+            numberOfLines={5}
+            onChangeText={(value) => updateField('observaciones', value)}
+            placeholder="Observaciones generales del equipo"
+            placeholderTextColor="#98A2B3"
+            style={[styles.input, styles.textArea]}
+            textAlignVertical="top"
+            value={form.observaciones}
+          />
+
+          <Text style={styles.characterCounter}>
+            {form.observaciones.length}/1000
+          </Text>
+        </View>
       </Section>
 
       <Modal animationType="slide" onRequestClose={() => setPickerOpen(null)} transparent visible={pickerOpen !== null}>
@@ -756,5 +783,16 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#DC2626',
+  },
+  textArea: {
+    minHeight: 120,
+    paddingTop: 12,
+  },
+
+  characterCounter: {
+    color: colors.muted,
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: 'right',
   },
 });

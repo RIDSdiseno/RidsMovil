@@ -1,3 +1,4 @@
+// src/types/api.ts
 export type Tecnico = {
   id_tecnico?: number;
   id?: number;
@@ -42,8 +43,10 @@ export type Equipo = {
   updatedAt?: string;
   propiedad?: string;
   propietarioExterno?: string | null;
+  observaciones?: string | null;
   tieneAgente?: boolean;
   tieneMantencion?: boolean;
+  tieneOneDrive?: boolean;
   macWifi?: string;
   redEthernet?: string;
   so?: string;
@@ -59,7 +62,7 @@ export type Equipo = {
   usuarioPersonal?: string;
   passwordPersonal?: string;
   adicionales?: EquipoAdicional[];
-  empresaId?: number;
+  empresaId?: number | null;
   idSolicitante?: number | null;
   nombreSolicitante?: string | null;
   solicitante?: Solicitante | null;
@@ -73,17 +76,25 @@ export type EquipoSoftwareInstalado = {
 };
 
 export type EquipoDetalle = Equipo & {
-  creadoPor?: { id_tecnico: number; nombre: string; email: string | null } | null;
+  creadoPor?: EquipoActor | null;
   creadoEn?: string | null;
   creacionAuditada?: boolean;
+
+  ultimaEdicion?: string | null;
+  ultimaEdicionPor?: EquipoActor | null;
+
   ultimaMantencion?: string | null;
+  ultimaMantencionPor?: EquipoActor | null;
+
   diskFreeGb?: number | null;
   diskTotalGb?: number | null;
+
   antivirusNombre?: string | null;
   antivirusActivo?: boolean | null;
   firewallActivo?: boolean | null;
   bitlockerEstado?: string | null;
   windowsUpdate?: string | null;
+
   softwares?: EquipoSoftwareInstalado[];
 };
 
@@ -275,6 +286,7 @@ export type ActualizarEquipoPayload = Partial<
     | 'disco'
     | 'propiedad'
     | 'propietarioExterno'
+    | 'observaciones'
     | 'macWifi'
     | 'redEthernet'
     | 'so'
@@ -385,4 +397,11 @@ export type CrearClienteEconnetPayload = {
   telefono?: string | null;
   direccion?: string | null;
   tipo?: 'EMPRESA' | 'PERSONA';
+};
+
+export type EquipoActor = {
+  tipo: 'TECNICO' | 'SISTEMA';
+  id_tecnico: number | null;
+  nombre: string;
+  email: string | null;
 };

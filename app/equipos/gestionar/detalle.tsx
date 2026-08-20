@@ -1,19 +1,20 @@
+// app/equipos/gestionar/detalle.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { actualizarEquipo, cambiarSolicitanteEquipo, getEquipoDetalle } from '@/src/api/rids';
+import {
+  actualizarEquipo,
+  cambiarAsignacionEquipo,
+  getEquipoDetalle,
+} from '@/src/api/rids';
+
 import { AppButton } from '@/src/components/AppButton';
 import { TextInput } from '@/src/components/AppTextInput';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { EditableSelect } from '@/src/components/EditableSelect';
 import { Screen } from '@/src/components/Screen';
-import {
-  clearGestionarEquipoState,
-  loadGestionarEquipoState,
-  saveGestionarEquipoState,
-} from '@/src/equipos/gestionar-state';
 import {
   ESTADO_EQUIPO_OPTIONS,
   MARCAS_SUGERIDAS,
@@ -23,6 +24,11 @@ import {
   TIPO_EQUIPO_OPTIONS,
   TIPOS_SIN_ESPECIFICACIONES,
 } from '@/src/equipos/equipo-opciones';
+import {
+  clearGestionarEquipoState,
+  loadGestionarEquipoState,
+  saveGestionarEquipoState,
+} from '@/src/equipos/gestionar-state';
 import { colors, shadow } from '@/src/theme/colors';
 import { EquipoDetalle, Solicitante } from '@/src/types/api';
 import { getSolicitanteId } from '@/src/visitas/visita-utils';
@@ -46,6 +52,7 @@ type EquipoEditForm = {
   ram: string;
   propiedad: PropiedadEquipo;
   propietarioExterno: string;
+  observaciones: string;
   macWifi: string;
   redEthernet: string;
   so: string;
@@ -76,6 +83,7 @@ const initialForm: EquipoEditForm = {
   disco: '',
   propiedad: 'Empresa',
   propietarioExterno: '',
+  observaciones: '',
   macWifi: '',
   redEthernet: '',
   so: '',
@@ -104,6 +112,7 @@ const editableFields: Exclude<keyof EquipoEditForm, 'adicionales' | 'propiedad' 
   'ram',
   'disco',
   'propietarioExterno',
+  'observaciones',
   'macWifi',
   'redEthernet',
   'so',
@@ -134,6 +143,7 @@ function formToState(equipo: EquipoDetalle): EquipoEditForm {
     disco: equipo.disco ?? '',
     propiedad: (equipo.propiedad as PropiedadEquipo) ?? 'Empresa',
     propietarioExterno: equipo.propietarioExterno ?? '',
+    observaciones: equipo.observaciones ?? '',
     macWifi: equipo.macWifi ?? '',
     redEthernet: equipo.redEthernet ?? '',
     so: equipo.so ?? '',
@@ -160,11 +170,21 @@ function formToState(equipo: EquipoDetalle): EquipoEditForm {
 
 export default function GestionarEquipoDetalleScreen() {
   const [equipo, setEquipo] = useState<EquipoDetalle | null>(null);
-  const [nuevoSolicitante, setNuevoSolicitante] = useState<Solicitante | null>(null);
   const [form, setForm] = useState<EquipoEditForm>(initialForm);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState<'tipo' | 'estado' | null>(null);
+
+  const [nuevaEmpresaId, setNuevaEmpresaId] =
+    useState<number | null>(null);
+
+  const [nuevoSolicitante, setNuevoSolicitante] =
+    useState<Solicitante | null>(null);
+
+  const [asignacionModificada, setAsignacionModificada] =
+    useState(false);
+
+  const [softwareExpanded, setSoftwareExpanded] = useState(false);
 
   const requiereEspecificaciones = !TIPOS_SIN_ESPECIFICACIONES.has(form.tipo);
 
@@ -181,26 +201,70 @@ export default function GestionarEquipoDetalleScreen() {
 
   const hasChanges = useMemo(() => {
     if (!equipo) return false;
+
     const changedFields = editableFields.some(
-      (field) => form[field].trim() !== String(equipo[field as keyof EquipoDetalle] ?? '').trim(),
+      (field) =>
+        form[field].trim() !==
+        String(
+          equipo[
+          field as keyof EquipoDetalle
+          ] ?? '',
+        ).trim(),
     );
-    const changedAnioPc = form.anioPc.trim() !== (equipo.anioPc != null ? String(equipo.anioPc) : '');
-    const changedPropiedad = form.propiedad !== (equipo.propiedad ?? 'Empresa');
-    const changedAdicionales =
-      JSON.stringify(normalizeAdicionales(form.adicionales)) !==
-      JSON.stringify(
-        (equipo.adicionales ?? []).map((item) => ({
-          tipo: item.tipo,
-          descripcion: item.descripcion ?? null,
-          cantidad: item.cantidad,
-          serialAdicional: item.serialAdicional ?? null,
-        })),
+
+    const changedAnioPc =
+      form.anioPc.trim() !==
+      (
+        equipo.anioPc != null
+          ? String(equipo.anioPc)
+          : ''
       );
-    const changedSolicitante = Boolean(
-      nuevoSolicitante && getSolicitanteId(nuevoSolicitante) !== (equipo.idSolicitante ?? 0),
+
+    const changedPropiedad =
+      form.propiedad !==
+      (equipo.propiedad ?? 'Empresa');
+
+    const changedAdicionales =
+      JSON.stringify(
+        normalizeAdicionales(
+          form.adicionales,
+        ),
+      ) !==
+      JSON.stringify(
+        (equipo.adicionales ?? []).map(
+          (item) => ({
+            tipo:
+              item.tipo,
+
+            descripcion:
+              item.descripcion ??
+              null,
+
+            cantidad:
+              item.cantidad,
+
+            serialAdicional:
+              item.serialAdicional ??
+              null,
+          }),
+        ),
+      );
+
+    const changedAsignacion =
+      asignacionModificada;
+
+    return (
+      changedFields ||
+      changedAnioPc ||
+      changedPropiedad ||
+      changedAdicionales ||
+      changedAsignacion
     );
-    return changedFields || changedAnioPc || changedPropiedad || changedAdicionales || changedSolicitante;
-  }, [equipo, form, nuevoSolicitante]);
+  }, [
+    equipo,
+    form,
+    asignacionModificada,
+  ]);
 
   useEffect(() => {
     async function boot() {
@@ -210,7 +274,21 @@ export default function GestionarEquipoDetalleScreen() {
         return;
       }
 
-      setNuevoSolicitante(saved.nuevoSolicitante);
+      setNuevaEmpresaId(
+        saved.asignacionModificada
+          ? saved.nuevaEmpresaId
+          : saved.equipo?.empresaId ?? null,
+      );
+
+      setNuevoSolicitante(
+        saved.asignacionModificada
+          ? saved.nuevoSolicitante
+          : null,
+      );
+
+      setAsignacionModificada(
+        saved.asignacionModificada ?? false,
+      );
 
       try {
         const fresh = await getEquipoDetalle(saved.equipo.id_equipo);
@@ -265,8 +343,23 @@ export default function GestionarEquipoDetalleScreen() {
 
   async function goCambiarAsignacion() {
     if (!equipo) return;
-    await saveGestionarEquipoState({ equipo, nuevoSolicitante });
-    router.push('/equipos/gestionar/asignacion');
+
+    await saveGestionarEquipoState({
+      equipo,
+
+      nuevaEmpresaId:
+        asignacionModificada
+          ? nuevaEmpresaId
+          : equipo.empresaId ?? null,
+
+      nuevoSolicitante,
+
+      asignacionModificada,
+    });
+
+    router.push(
+      '/equipos/gestionar/asignacion',
+    );
   }
 
   async function guardarCambios() {
@@ -291,6 +384,7 @@ export default function GestionarEquipoDetalleScreen() {
         ram: form.ram.trim(),
         propiedad: form.propiedad,
         propietarioExterno: form.propiedad === 'Externo' ? form.propietarioExterno.trim() : undefined,
+        observaciones: form.observaciones.trim() || null,
         macWifi: form.macWifi.trim(),
         redEthernet: form.redEthernet.trim(),
         so: form.so.trim(),
@@ -309,12 +403,28 @@ export default function GestionarEquipoDetalleScreen() {
         adicionales: normalizeAdicionales(form.adicionales),
       });
 
-      if (nuevoSolicitante && getSolicitanteId(nuevoSolicitante) !== (equipo.idSolicitante ?? 0)) {
-        await cambiarSolicitanteEquipo(equipo.id_equipo, getSolicitanteId(nuevoSolicitante));
+      if (asignacionModificada) {
+        const solicitanteSeleccionadoId =
+          nuevoSolicitante
+            ? getSolicitanteId(
+              nuevoSolicitante,
+            )
+            : null;
+
+        await cambiarAsignacionEquipo(
+          equipo.id_equipo,
+          {
+            empresaId:
+              nuevaEmpresaId,
+
+            solicitanteId:
+              solicitanteSeleccionadoId,
+          },
+        );
       }
 
       await clearGestionarEquipoState();
-      router.replace('/(tabs)');
+      router.replace('/equipos/gestionar');
       Alert.alert('Equipo', 'Equipo actualizado correctamente.');
     } catch (error) {
       Alert.alert('Equipo', error instanceof Error ? error.message : 'No se pudo actualizar el equipo.');
@@ -352,7 +462,10 @@ export default function GestionarEquipoDetalleScreen() {
     );
   }
 
-  const solicitanteActual = nuevoSolicitante?.nombre || equipo.nombreSolicitante || 'Sin solicitante';
+  const solicitanteActual =
+    asignacionModificada
+      ? nuevoSolicitante?.nombre ?? 'Sin solicitante'
+      : equipo.nombreSolicitante ?? 'Sin solicitante';
 
   return (
     <Screen bottomNavigation={<BottomNavigation />}>
@@ -370,28 +483,58 @@ export default function GestionarEquipoDetalleScreen() {
         <Ionicons color="#B7C0CE" name="chevron-forward" size={18} />
       </Pressable>
 
-      {(equipo.creadoEn || equipo.creadoPor) && (
-        <View style={styles.auditCard}>
-          <Text style={styles.auditTitle}>Registro</Text>
-          {equipo.creadoEn && (
-            <Text style={styles.auditText}>
-              Creado el {new Date(equipo.creadoEn).toLocaleDateString('es-CL')}
-              {equipo.creadoPor ? ` por ${equipo.creadoPor.nombre}` : ''}
-              {!equipo.creacionAuditada ? ' (fecha estimada, sin auditoría detallada)' : ''}
-            </Text>
-          )}
-          {equipo.updatedAt && (
-            <Text style={styles.auditText}>
-              Última edición: {new Date(equipo.updatedAt).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}
-            </Text>
-          )}
-          {equipo.ultimaMantencion && (
-            <Text style={styles.auditText}>
-              Última mantención: {new Date(equipo.ultimaMantencion).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}
-            </Text>
-          )}
-        </View>
-      )}
+      {(
+        equipo.creadoEn ||
+        equipo.creadoPor ||
+        equipo.ultimaEdicion ||
+        equipo.updatedAt ||
+        equipo.ultimaMantencion
+      ) && (
+          <View style={styles.auditCard}>
+            <Text style={styles.auditTitle}>Registro</Text>
+
+            {equipo.creadoEn && (
+              <Text style={styles.auditText}>
+                Creado el{' '}
+                {new Date(equipo.creadoEn).toLocaleDateString('es-CL')}
+                {equipo.creadoPor
+                  ? ` por ${equipo.creadoPor.nombre}`
+                  : ''}
+                {!equipo.creacionAuditada
+                  ? ' (fecha estimada, sin auditoría detallada)'
+                  : ''}
+              </Text>
+            )}
+
+            {(equipo.ultimaEdicion || equipo.updatedAt) && (
+              <Text style={styles.auditText}>
+                Última edición:{' '}
+                {new Date(
+                  equipo.ultimaEdicion ?? equipo.updatedAt!,
+                ).toLocaleString('es-CL', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                })}
+                {' · '}
+                {equipo.ultimaEdicionPor?.nombre ?? 'Agente / Sistema'}
+              </Text>
+            )}
+
+            {equipo.ultimaMantencion && (
+              <Text style={styles.auditText}>
+                Última mantención:{' '}
+                {new Date(
+                  equipo.ultimaMantencion,
+                ).toLocaleString('es-CL', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                })}
+                {' · '}
+                {equipo.ultimaMantencionPor?.nombre ?? 'Agente / Sistema'}
+              </Text>
+            )}
+          </View>
+        )}
 
       <Section title="Informacion requerida">
         <Field label="Serial" onChangeText={(value) => updateField('serial', value)} value={form.serial} />
@@ -467,6 +610,27 @@ export default function GestionarEquipoDetalleScreen() {
             value={form.propietarioExterno}
           />
         )}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Observaciones</Text>
+
+          <TextInput
+            multiline
+            maxLength={1000}
+            numberOfLines={5}
+            onChangeText={(value) =>
+              updateField('observaciones', value)
+            }
+            placeholder="Observaciones generales del equipo"
+            placeholderTextColor="#98A2B3"
+            style={[styles.input, styles.textArea]}
+            textAlignVertical="top"
+            value={form.observaciones}
+          />
+
+          <Text style={styles.characterCounter}>
+            {form.observaciones.length}/1000
+          </Text>
+        </View>
       </Section>
 
       <Modal animationType="slide" onRequestClose={() => setPickerOpen(null)} transparent visible={pickerOpen !== null}>
@@ -609,16 +773,69 @@ export default function GestionarEquipoDetalleScreen() {
       )}
 
       {equipo.softwares && equipo.softwares.length > 0 && (
-        <Section title={`Software instalado (${equipo.softwares.length})`}>
-          {equipo.softwares.map((sw) => (
-            <View key={sw.id} style={styles.softwareRow}>
-              <Text style={styles.softwareNombre}>{sw.nombre}</Text>
-              <Text style={styles.softwareMeta}>
-                {[sw.version, sw.publisher].filter(Boolean).join(' · ') || 'Sin datos adicionales'}
-              </Text>
+        <View style={styles.softwareSection}>
+          <Pressable
+            onPress={() => setSoftwareExpanded((current) => !current)}
+            style={({ pressed }) => [
+              styles.softwareHeader,
+              pressed && styles.softwareHeaderPressed,
+            ]}
+          >
+            <View style={styles.softwareHeaderLeft}>
+              <View style={styles.softwareHeaderIcon}>
+                <Ionicons
+                  color={colors.brand}
+                  name="apps-outline"
+                  size={20}
+                />
+              </View>
+
+              <View style={styles.softwareHeaderCopy}>
+                <Text style={styles.softwareHeaderTitle}>
+                  Software instalado
+                </Text>
+
+                <Text style={styles.softwareHeaderSubtitle}>
+                  {equipo.softwares.length}{' '}
+                  {equipo.softwares.length === 1
+                    ? 'aplicación detectada'
+                    : 'aplicaciones detectadas'}
+                </Text>
+              </View>
             </View>
-          ))}
-        </Section>
+
+            <Ionicons
+              color={colors.muted}
+              name={softwareExpanded ? 'chevron-up' : 'chevron-down'}
+              size={20}
+            />
+          </Pressable>
+
+          {softwareExpanded && (
+            <View style={styles.softwareList}>
+              {equipo.softwares.map((sw, index) => (
+                <View
+                  key={sw.id}
+                  style={[
+                    styles.softwareRow,
+                    index === equipo.softwares!.length - 1 &&
+                    styles.softwareRowLast,
+                  ]}
+                >
+                  <Text style={styles.softwareNombre}>
+                    {sw.nombre}
+                  </Text>
+
+                  <Text style={styles.softwareMeta}>
+                    {[sw.version, sw.publisher]
+                      .filter(Boolean)
+                      .join(' · ') || 'Sin datos adicionales'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       )}
 
       <View style={styles.actions}>
@@ -1004,19 +1221,98 @@ const styles = StyleSheet.create({
   badgeTextWarn: {
     color: '#DC2626',
   },
+  textArea: {
+    minHeight: 120,
+    paddingTop: 12,
+  },
+
+  characterCounter: {
+    color: colors.muted,
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  softwareSection: {
+    marginBottom: 24,
+  },
+
+  softwareHeader: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 14,
+  },
+
+  softwareHeaderPressed: {
+    opacity: 0.8,
+  },
+
+  softwareHeaderLeft: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  softwareHeaderIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.brandSoft,
+    borderRadius: 12,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+
+  softwareHeaderCopy: {
+    flex: 1,
+  },
+
+  softwareHeaderTitle: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  softwareHeaderSubtitle: {
+    color: colors.muted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  softwareList: {
+    backgroundColor: colors.surface,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    borderColor: colors.line,
+    borderTopWidth: 0,
+    borderWidth: 1,
+    marginTop: -1,
+    paddingHorizontal: 14,
+  },
+
   softwareRow: {
     borderBottomColor: colors.line,
     borderBottomWidth: 1,
-    paddingVertical: 8,
+    paddingVertical: 11,
   },
+
+  softwareRowLast: {
+    borderBottomWidth: 0,
+  },
+
   softwareNombre: {
     color: colors.ink,
     fontSize: 13,
     fontWeight: '700',
   },
+
   softwareMeta: {
     color: colors.muted,
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 3,
   },
 });
