@@ -186,6 +186,9 @@ export default function GestionarEquipoDetalleScreen() {
 
   const [softwareExpanded, setSoftwareExpanded] = useState(false);
 
+  const [refreshing, setRefreshing] =
+    useState(false);
+
   const requiereEspecificaciones = !TIPOS_SIN_ESPECIFICACIONES.has(form.tipo);
 
   const canSubmit = useMemo(
@@ -305,6 +308,92 @@ export default function GestionarEquipoDetalleScreen() {
 
     boot();
   }, []);
+
+  async function ejecutarRefresh() {
+    if (!equipo) return;
+
+    try {
+      setRefreshing(true);
+
+      const fresh =
+        await getEquipoDetalle(
+          equipo.id_equipo,
+        );
+
+      setEquipo(fresh);
+      setForm(
+        formToState(fresh),
+      );
+
+      /*
+       * Restablecemos la asignación a la
+       * información real recién consultada.
+       */
+      setNuevaEmpresaId(
+        fresh.empresaId ?? null,
+      );
+
+      setNuevoSolicitante(null);
+
+      setAsignacionModificada(false);
+
+      /*
+       * Actualizamos también el estado temporal
+       * para que, si se navega a otra pantalla,
+       * no vuelva información antigua.
+       */
+      await saveGestionarEquipoState({
+        equipo: fresh,
+
+        nuevaEmpresaId:
+          fresh.empresaId ?? null,
+
+        nuevoSolicitante: null,
+
+        asignacionModificada: false,
+      });
+
+    } catch (error) {
+      Alert.alert(
+        'Equipo',
+        error instanceof Error
+          ? error.message
+          : 'No se pudo actualizar la información del equipo.',
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  function refreshEquipo() {
+    /*
+     * Si existen cambios sin guardar,
+     * evitamos eliminarlos accidentalmente.
+     */
+    if (hasChanges) {
+      Alert.alert(
+        'Actualizar equipo',
+        'Hay cambios sin guardar. Si actualizas, estos cambios se perderán.',
+        [
+          {
+            text: 'Cancelar',
+            style: 'cancel',
+          },
+          {
+            text: 'Actualizar',
+            style: 'destructive',
+            onPress: () => {
+              void ejecutarRefresh();
+            },
+          },
+        ],
+      );
+
+      return;
+    }
+
+    void ejecutarRefresh();
+  }
 
   function updateField(key: Exclude<keyof EquipoEditForm, 'adicionales' | 'propiedad'>, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -468,7 +557,17 @@ export default function GestionarEquipoDetalleScreen() {
       : equipo.nombreSolicitante ?? 'Sin solicitante';
 
   return (
-    <Screen bottomNavigation={<BottomNavigation />}>
+    <Screen
+      bottomNavigation={
+        <BottomNavigation />
+      }
+      onRefresh={
+        refreshEquipo
+      }
+      refreshing={
+        refreshing
+      }
+    >
       <Text style={styles.title}>Editar equipo</Text>
       <Text style={styles.subtitle}>{equipo.serial || 'Equipo sin serial'}</Text>
 
