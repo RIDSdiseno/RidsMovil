@@ -1,3 +1,4 @@
+// app/equipos/gestionar/index.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -14,15 +15,15 @@ import {
 } from 'react-native';
 
 import { getClientesCache, getClientesCached, searchEquipos } from '@/src/api/rids';
+import { TextInput } from '@/src/components/AppTextInput';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { CalendarModal } from '@/src/components/CalendarModal';
 import { Screen } from '@/src/components/Screen';
-import { TextInput } from '@/src/components/AppTextInput';
+import { ESTADO_EQUIPO_OPTIONS, labelDeEstadoEquipo } from '@/src/equipos/equipo-opciones';
 import {
   getInitialGestionarEquipoState,
   saveGestionarEquipoState,
 } from '@/src/equipos/gestionar-state';
-import { ESTADO_EQUIPO_OPTIONS, labelDeEstadoEquipo } from '@/src/equipos/equipo-opciones';
 import { colors, shadow } from '@/src/theme/colors';
 import { Cliente, Equipo } from '@/src/types/api';
 
@@ -228,6 +229,15 @@ export default function GestionarEquipoScreen() {
                 {equipo.tieneMantencion ? (
                   <View style={styles.cardIndicator}>
                     <Ionicons color={colors.brand} name="build-outline" size={14} />
+                  </View>
+                ) : null}
+                {equipo.tieneOneDrive ? (
+                  <View style={styles.cardIndicator}>
+                    <Ionicons
+                      color={colors.brand}
+                      name="cloud-outline"
+                      size={14}
+                    />
                   </View>
                 ) : null}
               </View>

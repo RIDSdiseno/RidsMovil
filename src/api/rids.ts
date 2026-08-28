@@ -1,11 +1,12 @@
+// src/api/rids.ts
 import {
   ActualizarEquipoPayload,
   Cliente,
   CompletarVisitaPayload,
   ConfirmarEvidenciaPayload,
+  CrearClienteEconnetPayload,
   CrearEntregaPayload,
   CrearEquipoPayload,
-  CrearClienteEconnetPayload,
   CrearUsuarioPayload,
   CrearVisitaPayload,
   Entrega,
@@ -15,18 +16,18 @@ import {
   EvidenciaEntrega,
   HistorialVisita,
   LoginResponse,
+  RegistrarUbicacionPayload,
   Solicitante,
   SolicitarFirmaPayload,
   Sucursal,
-  RegistrarUbicacionPayload,
-  UploadSignatureResponse,
   UbicacionTecnico,
-  VisitaAsignada,
+  UploadSignatureResponse,
   Visita,
+  VisitaAsignada,
 } from '@/src/types/api';
 
-import { apiRequest, getStoredToken } from './client';
 import { cachedRequest, getCachedData, invalidateCache } from './cache';
+import { apiRequest, getStoredToken } from './client';
 import { API_URL } from './config';
 
 export function loginTecnico(email: string, password: string) {
@@ -196,78 +197,195 @@ export function getHistorialPorTecnicoCached(tecnicoId: number, page = 1, limit 
   );
 }
 
+/* =========================================================
+   EQUIPOS
+========================================================= */
+
 export function getEquipos() {
-  return apiRequest<{ equipos: Equipo[] }>('/auth/equipos');
+  return apiRequest<{ equipos: Equipo[] }>(
+    '/auth/getAllEquipos',
+  );
 }
 
 export type EquiposQuery = {
   search?: string;
   empresaId?: number | null;
   estado?: string | null;
+
   ingresoDesde?: string;
   ingresoHasta?: string;
+
   edicionDesde?: string;
   edicionHasta?: string;
+
   page?: number;
   limit?: number;
 };
 
-// Búsqueda/paginación server-side de equipos (para el listado de "Gestionar").
+/**
+ * Listado / búsqueda / filtros / paginación de equipos.
+ *
+ * Backend:
+ * GET /api/auth/getAllEquipos
+ */
 export function searchEquipos(params: EquiposQuery) {
   const qs = new URLSearchParams();
-  if (params.search?.trim()) qs.set('search', params.search.trim());
-  if (params.empresaId != null) qs.set('empresaId', String(params.empresaId));
-  if (params.estado) qs.set('estado', params.estado);
-  if (params.ingresoDesde) qs.set('ingresoDesde', params.ingresoDesde);
-  if (params.ingresoHasta) qs.set('ingresoHasta', params.ingresoHasta);
-  if (params.edicionDesde) qs.set('edicionDesde', params.edicionDesde);
-  if (params.edicionHasta) qs.set('edicionHasta', params.edicionHasta);
+
+  if (params.search?.trim()) {
+    qs.set('search', params.search.trim());
+  }
+
+  if (params.empresaId != null) {
+    qs.set('empresaId', String(params.empresaId));
+  }
+
+  if (params.estado) {
+    qs.set('estado', params.estado);
+  }
+
+  if (params.ingresoDesde) {
+    qs.set('ingresoDesde', params.ingresoDesde);
+  }
+
+  if (params.ingresoHasta) {
+    qs.set('ingresoHasta', params.ingresoHasta);
+  }
+
+  if (params.edicionDesde) {
+    qs.set('edicionDesde', params.edicionDesde);
+  }
+
+  if (params.edicionHasta) {
+    qs.set('edicionHasta', params.edicionHasta);
+  }
+
   qs.set('page', String(params.page ?? 1));
   qs.set('limit', String(params.limit ?? 30));
-  return apiRequest<{ equipos: Equipo[]; total: number; page: number; limit: number; hasMore: boolean }>(
-    `/auth/equipos?${qs.toString()}`,
+
+  return apiRequest<{
+    equipos: Equipo[];
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  }>(
+    `/auth/getAllEquipos?${qs.toString()}`,
   );
 }
 
+/**
+ * Listado completo con caché.
+ */
 export function getEquiposCached(force = false) {
-  return cachedRequest('equipos', getEquipos, { force });
+  return cachedRequest(
+    'equipos',
+    getEquipos,
+    { force },
+  );
 }
 
+/**
+ * Obtiene solamente lo que exista actualmente
+ * en caché.
+ */
 export function getEquiposCache() {
-  return getCachedData<{ equipos: Equipo[] }>('equipos');
+  return getCachedData<{ equipos: Equipo[] }>(
+    'equipos',
+  );
 }
 
+/**
+ * Ficha completa de un equipo.
+ *
+ * Backend:
+ * GET /api/auth/equipos/:id
+ */
 export function getEquipoDetalle(equipoId: number) {
-  return apiRequest<EquipoDetalle>(`/auth/equipos/${equipoId}`);
+  return apiRequest<EquipoDetalle>(
+    `/auth/equipos/${equipoId}`,
+  );
 }
 
-export async function actualizarEquipo(equipoId: number, payload: ActualizarEquipoPayload) {
-  const response = await apiRequest<{ equipo?: Equipo; ok?: boolean; message?: string }>(`/auth/equipos/${equipoId}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  });
-  invalidateCache('equipos');
-  return response;
-}
-
-export async function cambiarSolicitanteEquipo(equipoId: number, solicitanteId: number) {
-  const response = await apiRequest<{ equipo?: Equipo; ok?: boolean; message?: string }>(
-    `/auth/equipos/${equipoId}/solicitante`,
+/**
+ * Actualiza equipo.
+ *
+ * Backend:
+ * PATCH /api/auth/equipos/:id
+ */
+export async function actualizarEquipo(
+  equipoId: number,
+  payload: ActualizarEquipoPayload,
+) {
+  const response = await apiRequest<{
+    equipo?: Equipo;
+    detalleActualizado?: unknown;
+    ok?: boolean;
+    message?: string;
+  }>(
+    `/auth/equipos/${equipoId}`,
     {
-      method: 'PUT',
-      body: JSON.stringify({ solicitanteId }),
+      method: 'PATCH',
+      body: JSON.stringify(payload),
     },
   );
+
   invalidateCache('equipos');
+
   return response;
 }
 
-export async function crearEquipo(payload: CrearEquipoPayload) {
-  const response = await apiRequest<{ equipo: Equipo }>('/auth/crearequipo', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+/**
+ * Cambia el solicitante asociado al equipo.
+ *
+ * Backend:
+ * PUT /api/auth/equipos/:id/solicitante
+ */
+export async function cambiarAsignacionEquipo(
+  equipoId: number,
+  payload: {
+    empresaId: number | null;
+    solicitanteId: number | null;
+  },
+) {
+  const response = await apiRequest<{
+    equipo?: Equipo;
+    ok?: boolean;
+    message?: string;
+  }>(
+    `/auth/equipos/${equipoId}/asignacion`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    },
+  );
+
   invalidateCache('equipos');
+
+  return response;
+}
+
+/**
+ * Crea un equipo.
+ *
+ * Backend:
+ * POST /api/auth/createEquipo
+ */
+export async function crearEquipo(
+  payload: CrearEquipoPayload,
+) {
+  const response = await apiRequest<{
+    equipo: Equipo;
+    message?: string;
+  }>(
+    '/auth/createEquipo',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  );
+
+  invalidateCache('equipos');
+
   return response;
 }
 

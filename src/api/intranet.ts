@@ -1,3 +1,4 @@
+// src/api/intranet.ts
 import { INTRANET_API_URL } from './config';
 import { cachedRequest } from './cache';
 
