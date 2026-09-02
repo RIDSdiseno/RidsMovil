@@ -8,9 +8,11 @@ import { TextInput } from '@/src/components/AppTextInput';
 import { getSolicitantesListCached } from '@/src/api/rids';
 import { AppButton } from '@/src/components/AppButton';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
+import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
 import { Screen } from '@/src/components/Screen';
 import { EquipoNuevoState, loadEquipoState, saveEquipoState } from '@/src/equipos/equipo-state';
-import { colors, shadow } from '@/src/theme/colors';
+import { colors } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { Solicitante } from '@/src/types/api';
 import { getSolicitanteId } from '@/src/visitas/visita-utils';
 
@@ -99,22 +101,39 @@ export default function AgregarEquipoSolicitanteScreen() {
 
   return (
     <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
-      <Text style={styles.title}>Solicitante</Text>
-      <Text style={styles.subtitle}>{equipoState.empresa?.nombre}</Text>
+      <RidsFlowHeader
+        icon="person-outline"
+        label="NUEVO EQUIPO · PASO 2 DE 3"
+        subtitle={equipoState.empresa?.nombre}
+        title="Selecciona solicitante"
+      />
 
       <View style={styles.actions}>
         <AppButton disabled={!equipoState.solicitante} onPress={continuar} title="Continuar" />
         <AppButton onPress={() => router.back()} title="Volver" variant="ghost" />
       </View>
 
-      <TextInput
-        onChangeText={setSearch}
-        placeholder="Buscar solicitante"
-        placeholderTextColor="#98A2B3"
-        style={styles.input}
-        value={search}
-      />
-      <Text style={styles.helperText}>{equipoState.solicitante ? equipoState.solicitante.nombre : 'Ninguno seleccionado'}</Text>
+      <View style={styles.searchBox}>
+        <Ionicons color={ridsPalette.cyanDark} name="search-outline" size={20} />
+        <TextInput
+          onChangeText={setSearch}
+          placeholder="Buscar solicitante"
+          placeholderTextColor="#98A2B3"
+          style={styles.input}
+          value={search}
+        />
+        {search ? (
+          <Pressable hitSlop={10} onPress={() => setSearch('')}>
+            <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+          </Pressable>
+        ) : null}
+      </View>
+      <View style={styles.selectionRow}>
+        <Text style={styles.helperText}>Solicitante asignado</Text>
+        <Text numberOfLines={1} style={styles.selectedName}>
+          {equipoState.solicitante ? equipoState.solicitante.nombre : 'Ninguno'}
+        </Text>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.list}
@@ -124,6 +143,13 @@ export default function AgregarEquipoSolicitanteScreen() {
         scrollIndicatorInsets={{ bottom: 150 }}
         style={styles.listScroll}
         showsVerticalScrollIndicator={false}>
+        {filteredSolicitantes.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons color={ridsPalette.cyanDark} name="person-outline" size={25} />
+            <Text style={styles.emptyTitle}>Sin solicitantes</Text>
+            <Text style={styles.emptyText}>No encontramos personas con esa búsqueda.</Text>
+          </View>
+        ) : null}
         {filteredSolicitantes.map((solicitante) => {
           const id = getSolicitanteId(solicitante);
           const selected = equipoState.solicitante && getSolicitanteId(equipoState.solicitante) === id;
@@ -134,7 +160,7 @@ export default function AgregarEquipoSolicitanteScreen() {
               onPress={() => selectSolicitante(solicitante)}
               style={({ pressed }) => [styles.card, selected && styles.cardSelected, pressed && styles.cardPressed]}>
               <View style={styles.icon}>
-                <Ionicons color={colors.brand} name="person-outline" size={24} />
+                <Ionicons color={ridsPalette.cyanDark} name="person-outline" size={23} />
               </View>
               <View style={styles.copy}>
                 <Text style={styles.cardTitle}>{solicitante.nombre}</Text>
@@ -159,40 +185,52 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 21,
-    marginBottom: 18,
-    marginTop: 6,
-  },
   actions: {
     gap: 10,
     marginBottom: 18,
   },
-  input: {
+  searchBox: {
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 14,
+    borderRadius: 15,
     borderWidth: 1,
-    color: colors.ink,
-    fontSize: 15,
+    flexDirection: 'row',
+    gap: 10,
     minHeight: 52,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+  },
+  input: {
+    color: colors.ink,
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 11,
+  },
+  selectionRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    marginTop: 11,
   },
   helperText: {
-    color: colors.muted,
+    color: ridsPalette.charcoal,
     fontSize: 13,
-    marginTop: 10,
+    fontWeight: '800',
+  },
+  selectedName: {
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
+    color: ridsPalette.cyanDark,
+    flexShrink: 1,
+    fontSize: 11,
+    fontWeight: '900',
+    maxWidth: '58%',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
   list: {
-    gap: 12,
+    gap: 8,
     paddingBottom: 190,
     paddingTop: 14,
   },
@@ -203,48 +241,67 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 14,
-    padding: 16,
-    ...shadow,
+    gap: 10,
+    padding: 11,
   },
   cardSelected: {
-    backgroundColor: colors.brandSoft,
-    borderColor: colors.brand,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderColor: ridsPalette.cyanDark,
   },
   cardPressed: {
     transform: [{ scale: 0.99 }],
   },
   icon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 16,
-    height: 48,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
+    height: 38,
     justifyContent: 'center',
-    width: 48,
+    width: 38,
   },
   copy: {
     flex: 1,
   },
   cardTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
   },
   cardText: {
     color: colors.muted,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 3,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
   },
   check: {
     alignItems: 'center',
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
     borderRadius: 13,
-    height: 28,
+    height: 24,
     justifyContent: 'center',
-    width: 28,
+    width: 24,
+  },
+  emptyState: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 24,
+  },
+  emptyTitle: {
+    color: ridsPalette.charcoal,
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 8,
+  },
+  emptyText: {
+    color: ridsPalette.slate,
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });

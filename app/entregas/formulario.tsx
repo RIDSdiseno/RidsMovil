@@ -17,6 +17,7 @@ import {
 } from '@/src/api/rids';
 import { AppButton } from '@/src/components/AppButton';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
+import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
 import { Screen } from '@/src/components/Screen';
 import {
   clearEntregaState,
@@ -29,6 +30,7 @@ import {
   saveEntregaState,
 } from '@/src/entregas/entrega-state';
 import { colors, shadow } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 
 type SignaturePoint = {
   x: number;
@@ -368,8 +370,12 @@ export default function EntregaFormularioScreen() {
 
   return (
     <Screen bottomNavigation={<BottomNavigation />} scrollEnabled={!isSigning}>
-      <Text style={styles.title}>{isRetiro ? 'Nuevo retiro' : 'Nueva entrega'}</Text>
-      <Text style={styles.subtitle}>{empresa.nombre}</Text>
+      <RidsFlowHeader
+        icon={isRetiro ? 'arrow-undo-outline' : 'arrow-redo-outline'}
+        label={`${brandName.toUpperCase()} · ${isRetiro ? 'RETIRO' : 'ENTREGA'}`}
+        subtitle={empresa.nombre}
+        title={isRetiro ? 'Nuevo retiro' : 'Nueva entrega'}
+      />
 
       <Section icon="business-outline" title="Empresa">
         <InfoRow label="Empresa seleccionada" value={empresa.nombre} />
@@ -380,7 +386,7 @@ export default function EntregaFormularioScreen() {
       <Section icon="person-outline" title={isRetiro ? 'Responsable de retiro' : 'Datos del receptor'}>
         <Pressable onPress={() => router.push('/entregas/receptor')} style={styles.receptorButton}>
           <View style={styles.receptorIcon}>
-            <Ionicons color={colors.brand} name="person-add-outline" size={24} />
+            <Ionicons color={ridsPalette.cyanDark} name="person-add-outline" size={23} />
           </View>
           <View style={styles.receptorCopy}>
             <Text style={styles.receptorTitle}>{receptorNombre || (isRetiro ? 'Responsable' : 'Quien recibe')}</Text>
@@ -418,7 +424,7 @@ export default function EntregaFormularioScreen() {
             {entregaState.photo ? (
               <Image contentFit="cover" source={{ uri: entregaState.photo.uri }} style={styles.photoImage} />
             ) : (
-              <Ionicons color={colors.brand} name="image-outline" size={34} />
+              <Ionicons color={ridsPalette.cyanDark} name="image-outline" size={33} />
             )}
           </View>
           <View style={styles.photoCopy}>
@@ -566,7 +572,7 @@ function Section({
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <View style={styles.sectionIcon}>
-          <Ionicons color={colors.brand} name={icon} size={20} />
+          <Ionicons color={ridsPalette.cyanDark} name={icon} size={20} />
         </View>
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
@@ -927,18 +933,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
   },
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 21,
-    marginBottom: 22,
-    marginTop: 6,
-  },
   section: {
     marginBottom: 24,
   },
@@ -950,25 +944,24 @@ const styles = StyleSheet.create({
   },
   sectionIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
+    backgroundColor: ridsPalette.cyanSoft,
     borderRadius: 12,
     height: 36,
     justifyContent: 'center',
     width: 36,
   },
   sectionTitle: {
-    color: colors.ink,
+    color: ridsPalette.charcoal,
     fontSize: 18,
     fontWeight: '900',
   },
   infoRow: {
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 16,
+    borderRadius: 13,
     borderWidth: 1,
-    marginBottom: 12,
-    padding: 14,
-    ...shadow,
+    marginBottom: 8,
+    padding: 10,
   },
   infoLabel: {
     color: colors.muted,
@@ -978,7 +971,7 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '900',
     marginTop: 4,
   },
@@ -986,21 +979,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 12,
-    minHeight: 78,
-    padding: 14,
+    gap: 9,
+    minHeight: 64,
+    padding: 10,
     ...shadow,
   },
   receptorIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 14,
-    height: 46,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 11,
+    height: 36,
     justifyContent: 'center',
-    width: 46,
+    width: 36,
   },
   receptorCopy: {
     flex: 1,
@@ -1019,21 +1012,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 14,
-    padding: 14,
+    gap: 10,
+    padding: 10,
     ...shadow,
   },
   photoPreview: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 16,
-    height: 82,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
+    height: 64,
     justifyContent: 'center',
     overflow: 'hidden',
-    width: 82,
+    width: 64,
   },
   photoImage: {
     height: '100%',

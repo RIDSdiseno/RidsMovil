@@ -23,6 +23,7 @@ import {
 import { AppButton } from '@/src/components/AppButton';
 import { TextInput } from '@/src/components/AppTextInput';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
+import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
 import { Screen } from '@/src/components/Screen';
 
 import {
@@ -31,6 +32,7 @@ import {
 } from '@/src/equipos/gestionar-state';
 
 import { colors, shadow } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 
 import {
   Cliente,
@@ -360,18 +362,12 @@ export default function CambiarAsignacionEquipoScreen() {
       }
       scroll={false}
     >
-      <Text
-        style={styles.title}
-      >
-        Cambiar asignacion
-      </Text>
-
-      <Text
-        style={styles.subtitle}
-      >
-        {equipo.serial ||
-          'Equipo sin serial'}
-      </Text>
+      <RidsFlowHeader
+        icon="people-outline"
+        label="ASIGNACIÓN DE EQUIPO"
+        subtitle="Selecciona la nueva empresa y responsable"
+        title={equipo.serial || 'Equipo sin serial'}
+      />
 
       {/* =========================
           EMPRESA
@@ -775,21 +771,11 @@ const styles =
     },
 
     title: {
-      color: colors.ink,
-      fontSize: 32,
-      fontWeight: '900',
-    },
-
-    subtitle: {
-      color: colors.muted,
-      fontSize: 15,
-      lineHeight: 21,
-      marginBottom: 18,
-      marginTop: 6,
+      color: ridsPalette.charcoal,
     },
 
     label: {
-      color: colors.ink,
+      color: ridsPalette.charcoal,
       fontSize: 13,
       fontWeight: '800',
       marginBottom: 6,
@@ -809,6 +795,7 @@ const styles =
         'space-between',
       minHeight: 52,
       paddingHorizontal: 14,
+      marginBottom: 10,
     },
 
     selectorText: {
@@ -833,14 +820,18 @@ const styles =
 
     selectedBox: {
       alignItems: 'center',
+      backgroundColor: ridsPalette.cyanSoft,
+      borderRadius: 12,
       flexDirection: 'row',
       justifyContent:
         'space-between',
       marginTop: 10,
+      paddingHorizontal: 11,
+      paddingVertical: 8,
     },
 
     helperText: {
-      color: colors.muted,
+      color: ridsPalette.cyanDark,
       fontSize: 13,
     },
 
@@ -869,7 +860,7 @@ const styles =
     },
 
     list: {
-      gap: 12,
+      gap: 8,
       paddingBottom: 20,
       paddingTop: 14,
     },
@@ -884,19 +875,19 @@ const styles =
         colors.surface,
       borderColor:
         colors.line,
-      borderRadius: 18,
+      borderRadius: 14,
       borderWidth: 1,
       flexDirection: 'row',
-      gap: 14,
-      padding: 16,
+      gap: 10,
+      padding: 11,
       ...shadow,
     },
 
     cardSelected: {
       backgroundColor:
-        colors.brandSoft,
+        ridsPalette.cyanSoft,
       borderColor:
-        colors.brand,
+        ridsPalette.cyanDark,
     },
 
     cardPressed: {
@@ -910,12 +901,12 @@ const styles =
     icon: {
       alignItems: 'center',
       backgroundColor:
-        colors.brandSoft,
-      borderRadius: 16,
-      height: 48,
+        ridsPalette.cyanSoft,
+      borderRadius: 12,
+      height: 38,
       justifyContent:
         'center',
-      width: 48,
+      width: 38,
     },
 
     copy: {
@@ -924,26 +915,26 @@ const styles =
 
     cardTitle: {
       color: colors.ink,
-      fontSize: 16,
+      fontSize: 14,
       fontWeight: '800',
     },
 
     cardText: {
       color: colors.muted,
-      fontSize: 13,
-      lineHeight: 19,
-      marginTop: 3,
+      fontSize: 12,
+      lineHeight: 17,
+      marginTop: 2,
     },
 
     check: {
       alignItems: 'center',
       backgroundColor:
-        colors.brand,
+        ridsPalette.cyanDark,
       borderRadius: 13,
-      height: 28,
+      height: 24,
       justifyContent:
         'center',
-      width: 28,
+      width: 24,
     },
 
     actions: {
@@ -997,7 +988,7 @@ const styles =
     },
 
     modalOptionTextActive: {
-      color: colors.brand,
+      color: ridsPalette.cyanDark,
       fontWeight: '800',
     },
   });

@@ -226,24 +226,24 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 18,
-    gap: 10,
-    padding: 16,
+    borderRadius: 14,
+    gap: 7,
+    padding: 12,
     ...shadow,
   },
   fila: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 9,
     justifyContent: 'space-between',
   },
   filaEtiqueta: {
     color: colors.muted,
-    fontSize: 14,
+    fontSize: 12,
   },
   filaValor: {
     color: colors.ink,
     flexShrink: 1,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     textAlign: 'right',
   },
@@ -253,14 +253,14 @@ const styles = StyleSheet.create({
   evento: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   eventoTexto: {
     flex: 1,
   },
   eventoTitulo: {
     color: colors.ink,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
   },
   eventoDetalle: {

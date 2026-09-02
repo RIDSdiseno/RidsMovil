@@ -6,11 +6,13 @@ import { ActivityIndicator, Alert, Linking, Platform, Pressable, StyleSheet, Tex
 
 import { getMisVisitasAsignadasHoy, iniciarRutaVisitaAsignada, iniciarVisitaAsignada } from '@/src/api/rids';
 import { useAuth } from '@/src/auth/AuthContext';
+import { RidsModuleBanner } from '@/src/components/RidsModuleBanner';
 import { Screen } from '@/src/components/Screen';
 import { loadEntregaState } from '@/src/entregas/entrega-state';
 import { loadEquipoState } from '@/src/equipos/equipo-state';
 import { loadGestionarEquipoState } from '@/src/equipos/gestionar-state';
 import { colors, shadow } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { VisitaAsignada } from '@/src/types/api';
 import { getAgendaCardAction } from '@/src/visitas/agenda-card-action';
 import { reconcileTrackingForAssignedAgendas } from '@/src/visitas/agenda-tracking-flow';
@@ -294,29 +296,29 @@ export default function DashboardScreen() {
     return (
       <Screen scroll={false}>
         <View style={styles.center}>
-          <ActivityIndicator color={colors.brand} />
+          <ActivityIndicator color={ridsPalette.cyanDark} />
         </View>
       </Screen>
     );
   }
 
   return (
-    <Screen scroll={false}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Hola, {firstName}</Text>
-          <Text style={styles.subtitle}>Panel de trabajo en terreno</Text>
-        </View>
-        <View style={styles.avatar}>
-          <Ionicons color={colors.brand} name="person" size={24} />
-        </View>
-      </View>
+    <Screen>
+      <RidsModuleBanner
+        icon="home-outline"
+        label="RESUMEN DE TU JORNADA"
+        title={`Hola, ${firstName}`}
+      />
 
       <Pressable
         onPress={() => router.push(workStatus.route)}
         style={({ pressed }) => [styles.statusCard, pressed && styles.statusCardPressed]}>
+        <View style={styles.statusAccent} />
         <View style={styles.statusCopy}>
-          <Text style={styles.statusLabel}>Estado actual</Text>
+          <View style={styles.statusLabelRow}>
+            <View style={styles.statusDot} />
+            <Text style={styles.statusLabel}>Estado actual</Text>
+          </View>
           <Text style={styles.statusTitle}>{workStatus.title}</Text>
           <Text style={styles.statusText}>{workStatus.text}</Text>
         </View>
@@ -325,14 +327,20 @@ export default function DashboardScreen() {
         </View>
       </Pressable>
 
-      <Text style={styles.sectionTitle}>Visitas programadas</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Visitas programadas</Text>
+        <View style={styles.todayBadge}>
+          <Ionicons color={ridsPalette.cyanDark} name="calendar-clear-outline" size={13} />
+          <Text style={styles.todayText}>HOY</Text>
+        </View>
+      </View>
       <View style={styles.agendaBlock}>
-        {loadingAgenda ? <ActivityIndicator color={colors.brand} style={styles.agendaLoader} /> : null}
+        {loadingAgenda ? <ActivityIndicator color={ridsPalette.cyanDark} style={styles.agendaLoader} /> : null}
 
         {!loadingAgenda && agendaToday.length === 0 ? (
           <Pressable onPress={() => router.push('/agenda')} style={styles.emptyAgendaCard}>
             <View style={styles.agendaIcon}>
-              <Ionicons color={colors.brand} name="calendar-outline" size={22} />
+              <Ionicons color={ridsPalette.cyanDark} name="calendar-outline" size={22} />
             </View>
             <View style={styles.agendaCopy}>
               <Text style={styles.agendaTitle}>Sin visitas para hoy</Text>
@@ -388,11 +396,16 @@ function AgendaTodayCard({
         pressed && action.primary === 'START_ROUTE' && styles.cardPressed,
       ]}>
       <View style={styles.agendaIcon}>
-        <Ionicons color={colors.brand} name="briefcase-outline" size={22} />
+        <Ionicons color={ridsPalette.cyanDark} name="briefcase-outline" size={21} />
       </View>
       <View style={styles.agendaCopy}>
         <Text style={styles.agendaTitle}>{empresa}</Text>
-        <Text style={styles.agendaText}>{hora || 'Sin horario'} · {item.estado}</Text>
+        <View style={styles.agendaMetaRow}>
+          <Ionicons color={ridsPalette.slate} name="time-outline" size={14} />
+          <Text style={styles.agendaText}>{hora || 'Sin horario'}</Text>
+          <View style={styles.metaDivider} />
+          <Text style={styles.agendaState}>{formatAgendaState(item.estado)}</Text>
+        </View>
         {isStarted ? (
           <View style={styles.startedVisitBadge}>
             <Ionicons color="#047857" name="checkmark-circle-outline" size={14} />
@@ -426,8 +439,8 @@ function AgendaTodayCard({
               loadingVisit && styles.routeButtonDisabled,
               pressed && styles.routeButtonPressed,
             ]}>
-            {loadingVisit ? <ActivityIndicator color={colors.brand} size="small" /> : null}
-            <Ionicons color={colors.brand} name="checkmark-circle-outline" size={16} />
+            {loadingVisit ? <ActivityIndicator color={ridsPalette.cyanDark} size="small" /> : null}
+            <Ionicons color={ridsPalette.cyanDark} name="checkmark-circle-outline" size={16} />
             <Text style={styles.visitButtonText}>Llegué al cliente</Text>
           </Pressable>
         ) : null}
@@ -448,6 +461,13 @@ function AgendaTodayCard({
       </View>
     </Pressable>
   );
+}
+
+function formatAgendaState(state: string) {
+  return state
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function getDestino(visita: VisitaAsignada) {
@@ -483,38 +503,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 22,
-  },
-  greeting: {
-    color: colors.ink,
-    fontSize: 30,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    marginTop: 4,
-  },
-  avatar: {
-    alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 22,
-    height: 48,
-    justifyContent: 'center',
-    width: 48,
-  },
   statusCard: {
-    backgroundColor: colors.navy,
-    borderRadius: 26,
+    backgroundColor: ridsPalette.cyanDark,
+    borderRadius: 20,
     flexDirection: 'row',
     gap: 18,
-    marginBottom: 28,
-    padding: 22,
+    marginBottom: 24,
+    overflow: 'hidden',
+    padding: 20,
     ...shadow,
+  },
+  statusAccent: {
+    backgroundColor: colors.brandDark,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    top: 0,
+    width: 4,
   },
   statusCardPressed: {
     transform: [{ scale: 0.99 }],
@@ -522,8 +527,19 @@ const styles = StyleSheet.create({
   statusCopy: {
     flex: 1,
   },
+  statusLabelRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+  },
+  statusDot: {
+    backgroundColor: colors.white,
+    borderRadius: 4,
+    height: 7,
+    width: 7,
+  },
   statusLabel: {
-    color: '#89B8E9',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -536,7 +552,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   statusText: {
-    color: '#C9D8EA',
+    color: 'rgba(255, 255, 255, 0.86)',
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,
@@ -544,20 +560,39 @@ const styles = StyleSheet.create({
   pulse: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: colors.brand,
-    borderRadius: 22,
+    backgroundColor: colors.brandDark,
+    borderRadius: 18,
     height: 56,
     justifyContent: 'center',
     width: 56,
   },
+  sectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   sectionTitle: {
-    color: colors.ink,
+    color: ridsPalette.charcoal,
     fontSize: 18,
     fontWeight: '900',
-    marginBottom: 14,
+  },
+  todayBadge: {
+    alignItems: 'center',
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 13,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  todayText: {
+    color: ridsPalette.cyanDark,
+    fontSize: 10,
+    fontWeight: '900',
   },
   agendaBlock: {
-    gap: 12,
+    gap: 8,
   },
   agendaLoader: {
     marginVertical: 8,
@@ -566,53 +601,68 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 12,
-    padding: 14,
-    ...shadow,
+    gap: 9,
+    padding: 10,
   },
   emptyAgendaCard: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 12,
-    padding: 14,
-    ...shadow,
+    gap: 9,
+    padding: 10,
   },
   cardPressed: {
     transform: [{ scale: 0.99 }],
   },
   agendaIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 14,
-    height: 42,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 13,
+    height: 36,
     justifyContent: 'center',
-    width: 42,
+    width: 36,
   },
   agendaCopy: {
     flex: 1,
   },
   agendaTitle: {
-    color: colors.ink,
-    fontSize: 15,
+    color: ridsPalette.charcoal,
+    fontSize: 14,
     fontWeight: '900',
   },
+  agendaMetaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
+    marginTop: 5,
+  },
   agendaText: {
-    color: colors.muted,
+    color: ridsPalette.slate,
     fontSize: 12,
-    marginTop: 4,
+  },
+  metaDivider: {
+    backgroundColor: colors.line,
+    height: 12,
+    marginHorizontal: 2,
+    width: 1,
+  },
+  agendaState: {
+    color: ridsPalette.cyanDark,
+    fontSize: 11,
+    fontWeight: '800',
   },
   agendaNotes: {
     color: colors.ink,
     fontSize: 13,
     lineHeight: 18,
-    marginTop: 8,
+    marginTop: 5,
   },
   routeHint: {
     color: colors.muted,
@@ -624,8 +674,8 @@ const styles = StyleSheet.create({
   routeButton: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: colors.brand,
-    borderRadius: 999,
+    backgroundColor: ridsPalette.cyanDark,
+    borderRadius: 12,
     flexDirection: 'row',
     gap: 6,
     marginTop: 12,
@@ -646,8 +696,8 @@ const styles = StyleSheet.create({
   visitButton: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 999,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
     flexDirection: 'row',
     gap: 6,
     marginTop: 8,
@@ -655,7 +705,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   visitButtonText: {
-    color: colors.brand,
+    color: ridsPalette.cyanDark,
     fontSize: 12,
     fontWeight: '900',
   },

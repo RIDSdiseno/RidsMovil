@@ -3,18 +3,22 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AppButton } from '@/src/components/AppButton';
+import { RidsModuleBanner } from '@/src/components/RidsModuleBanner';
 import { Screen } from '@/src/components/Screen';
 import { useAuth } from '@/src/auth/AuthContext';
 import { loadEntregaState } from '@/src/entregas/entrega-state';
 import { loadEquipoState } from '@/src/equipos/equipo-state';
 import { loadGestionarEquipoState } from '@/src/equipos/gestionar-state';
 import { colors, shadow } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { loadVisitaState } from '@/src/visitas/visita-state';
 
 export default function PerfilScreen() {
   const { tecnico, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+  const initials = getInitials(tecnico?.nombre);
+  const role = formatRole(tecnico?.rol);
+  const technicianId = tecnico?.id_tecnico ?? tecnico?.id;
 
   async function handleSignOut() {
     const [visitaState, entregaState, equipoState, gestionarEquipoState] = await Promise.all([
@@ -56,151 +60,335 @@ export default function PerfilScreen() {
   }
 
   return (
-    // scroll={false}: la cabecera y la tarjeta del técnico quedan fijas y solo
-    // se desplaza la lista de accesos de abajo.
     <Screen scroll={false}>
-      <Text style={styles.title}>Perfil</Text>
-      <Text style={styles.subtitle}>Sesion activa del tecnico.</Text>
+      <RidsModuleBanner
+        icon="person-outline"
+        label="CUENTA TÉCNICA"
+        title="Tus accesos y actividad"
+      />
 
       <View style={styles.card}>
-        <View style={styles.avatar}>
-          <Ionicons color={colors.brand} name="person" size={34} />
+        <View style={styles.cardAccent} />
+        <View style={styles.identityRow}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={styles.identityText}>
+            <Text numberOfLines={2} style={styles.name}>{tecnico?.nombre || 'Técnico RIDS'}</Text>
+            <View style={styles.roleRow}>
+              <Ionicons color={ridsPalette.cyan} name="shield-checkmark" size={15} />
+              <Text style={styles.role}>{role}</Text>
+            </View>
+          </View>
         </View>
-        <Text style={styles.name}>{tecnico?.nombre || 'Tecnico RIDS'}</Text>
-        <Text style={styles.email}>{tecnico?.email || 'Cuenta tecnica'}</Text>
+
         <View style={styles.divider} />
-        <AppButton loading={signingOut} onPress={handleSignOut} title="Cerrar sesion" variant="secondary" />
+        <View style={styles.accountRow}>
+          <View style={styles.accountIcon}>
+            <Ionicons color={ridsPalette.cyan} name="mail-outline" size={18} />
+          </View>
+          <View style={styles.accountText}>
+            <Text style={styles.accountLabel}>CORREO</Text>
+            <Text numberOfLines={1} style={styles.email}>{tecnico?.email || 'Cuenta técnica'}</Text>
+          </View>
+        </View>
+        {technicianId ? (
+          <View style={styles.technicianId}>
+            <Ionicons color={ridsPalette.slate} name="id-card-outline" size={16} />
+            <Text style={styles.technicianIdText}>Técnico #{technicianId}</Text>
+          </View>
+        ) : null}
       </View>
 
       <ScrollView
         contentContainerStyle={styles.historyActions}
         showsVerticalScrollIndicator={false}
         style={styles.historyScroll}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Accesos rápidos</Text>
+          <View style={styles.sectionLine} />
+        </View>
         <HistoryButton
+          backgroundColor={ridsPalette.cyanSoft}
+          color={ridsPalette.cyanDark}
           icon="calendar-outline"
           onPress={() => router.push('/agenda')}
           title="Mi agenda"
         />
         <HistoryButton
+          backgroundColor={ridsPalette.blueSoft}
+          color={ridsPalette.blue}
           icon="clipboard-outline"
           onPress={() => router.push('/perfil/historial-visitas')}
           title="Historial de visitas"
         />
         <HistoryButton
+          backgroundColor={ridsPalette.graySoft}
+          color={ridsPalette.charcoal}
           icon="cube-outline"
           onPress={() => router.push('/perfil/historial-entregas')}
           title="Historial de entregas"
         />
         <HistoryButton
+          backgroundColor={ridsPalette.greenSoft}
+          color={ridsPalette.green}
           icon="pulse-outline"
           onPress={() => router.push('/perfil/diagnostico')}
-          title="Diagnostico de ubicacion"
+          title="Diagnóstico de ubicación"
         />
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={signingOut}
+          onPress={handleSignOut}
+          style={({ pressed }) => [
+            styles.signOutButton,
+            pressed && !signingOut && styles.historyPressed,
+            signingOut && styles.signOutDisabled,
+          ]}>
+          <View style={styles.signOutIcon}>
+            <Ionicons color={colors.danger} name="log-out-outline" size={22} />
+          </View>
+          <Text style={styles.signOutText}>{signingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}</Text>
+          <Ionicons color={colors.danger} name="chevron-forward" size={19} />
+        </Pressable>
       </ScrollView>
     </Screen>
   );
 }
 
 function HistoryButton({
+  backgroundColor,
+  color,
   icon,
   onPress,
   title,
 }: {
+  backgroundColor: string;
+  color: string;
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   title: string;
 }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.historyButton, pressed && styles.historyPressed]}>
-      <View style={styles.historyIcon}>
-        <Ionicons color={colors.brand} name={icon} size={24} />
+      <View style={[styles.historyIcon, { backgroundColor }]}>
+        <Ionicons color={color} name={icon} size={23} />
       </View>
       <Text style={styles.historyTitle}>{title}</Text>
-      <Ionicons color={colors.muted} name="chevron-forward" size={20} />
+      <View style={styles.chevron}>
+        <Ionicons color={ridsPalette.slate} name="chevron-forward" size={18} />
+      </View>
     </Pressable>
   );
 }
 
+function getInitials(name?: string) {
+  const parts = name?.trim().split(/\s+/).filter(Boolean) ?? [];
+  if (!parts.length) return 'RT';
+  return `${parts[0]?.[0] ?? ''}${parts.length > 1 ? parts[parts.length - 1]?.[0] ?? '' : ''}`.toUpperCase();
+}
+
+function formatRole(role?: string) {
+  if (!role) return 'Técnico';
+  return role
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
+
 const styles = StyleSheet.create({
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    marginBottom: 22,
-    marginTop: 6,
-  },
   card: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 26,
-    padding: 22,
+    backgroundColor: ridsPalette.charcoal,
+    borderRadius: 16,
+    overflow: 'hidden',
+    padding: 15,
     ...shadow,
+  },
+  cardAccent: {
+    backgroundColor: ridsPalette.cyan,
+    height: 4,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  identityRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 11,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 34,
-    height: 74,
+    backgroundColor: ridsPalette.cyan,
+    borderColor: '#71D5DE',
+    borderRadius: 25,
+    borderWidth: 2,
+    height: 50,
     justifyContent: 'center',
-    width: 74,
+    width: 50,
+  },
+  avatarText: {
+    color: ridsPalette.charcoal,
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  identityText: {
+    flex: 1,
   },
   name: {
-    color: colors.ink,
-    fontSize: 22,
+    color: colors.white,
+    fontSize: 17,
     fontWeight: '900',
-    marginTop: 14,
   },
-  email: {
-    color: colors.muted,
-    fontSize: 14,
+  roleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
     marginTop: 4,
   },
+  role: {
+    color: '#B7EAF0',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  email: {
+    color: '#E8EDF2',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   divider: {
-    backgroundColor: colors.line,
+    backgroundColor: '#2A3440',
     height: 1,
-    marginVertical: 22,
+    marginVertical: 12,
     width: '100%',
   },
-  historyScroll: {
-    // Ocupa el alto restante bajo la tarjeta fija; es la única zona que scrollea.
+  accountRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 11,
+  },
+  accountIcon: {
+    alignItems: 'center',
+    backgroundColor: '#20313A',
+    borderRadius: 12,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  accountText: {
     flex: 1,
-    marginTop: 20,
+  },
+  accountLabel: {
+    color: '#7F8C9A',
+    fontSize: 10,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+  technicianId: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#202A35',
+    borderRadius: 13,
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  technicianIdText: {
+    color: '#AAB4C0',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  historyScroll: {
+    flex: 1,
+    marginTop: 17,
   },
   historyActions: {
+    gap: 7,
+    paddingBottom: 28,
+  },
+  sectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
     gap: 12,
-    paddingBottom: 24,
+    marginBottom: 2,
+  },
+  sectionTitle: {
+    color: ridsPalette.charcoal,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  sectionLine: {
+    backgroundColor: colors.line,
+    flex: 1,
+    height: 1,
   },
   historyButton: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 14,
-    minHeight: 72,
-    padding: 16,
-    ...shadow,
+    gap: 10,
+    minHeight: 54,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
   },
   historyPressed: {
+    opacity: 0.78,
     transform: [{ scale: 0.99 }],
   },
   historyIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 15,
-    height: 46,
+    borderRadius: 11,
+    height: 36,
     justifyContent: 'center',
-    width: 46,
+    width: 36,
   },
   historyTitle: {
-    color: colors.ink,
+    color: ridsPalette.charcoal,
     flex: 1,
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  chevron: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 12,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
+  },
+  signOutButton: {
+    alignItems: 'center',
+    borderColor: '#F4CACA',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 5,
+    minHeight: 52,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  signOutIcon: {
+    alignItems: 'center',
+    backgroundColor: '#FDECEC',
+    borderRadius: 13,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  signOutText: {
+    color: colors.danger,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  signOutDisabled: {
+    opacity: 0.55,
   },
 });

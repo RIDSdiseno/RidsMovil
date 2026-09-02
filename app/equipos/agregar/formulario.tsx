@@ -9,6 +9,8 @@ import { crearEquipo } from '@/src/api/rids';
 import { AppButton } from '@/src/components/AppButton';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { EditableSelect } from '@/src/components/EditableSelect';
+import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
+import { RidsSectionTitle } from '@/src/components/RidsSectionTitle';
 import { Screen } from '@/src/components/Screen';
 import {
   ESTADO_EQUIPO_OPTIONS,
@@ -21,6 +23,7 @@ import {
 } from '@/src/equipos/equipo-opciones';
 import { clearEquipoState, EquipoNuevoState, loadEquipoState } from '@/src/equipos/equipo-state';
 import { colors, shadow } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { getSolicitanteId } from '@/src/visitas/visita-utils';
 
 type EquipoAdicionalForm = {
@@ -252,14 +255,18 @@ export default function AgregarEquipoFormularioScreen() {
 
   return (
     <Screen bottomNavigation={<BottomNavigation />}>
-      <Text style={styles.title}>Nuevo equipo</Text>
-      <Text style={styles.subtitle}>Completa la informacion del equipo.</Text>
+      <RidsFlowHeader
+        icon="hardware-chip-outline"
+        label="NUEVO EQUIPO · PASO 3 DE 3"
+        subtitle={equipoState.empresa?.nombre}
+        title="Completa los datos del equipo"
+      />
 
       <Pressable
         onPress={() => router.replace('/equipos/agregar/solicitante')}
         style={({ pressed }) => [styles.summaryCard, pressed && styles.cardPressed]}>
         <View style={styles.summaryIcon}>
-          <Ionicons color={colors.brand} name="laptop-outline" size={24} />
+          <Ionicons color={ridsPalette.cyanDark} name="person-outline" size={23} />
         </View>
         <View style={styles.summaryCopy}>
           <Text style={styles.summaryTitle}>{equipoState.solicitante?.nombre}</Text>
@@ -485,7 +492,7 @@ export default function AgregarEquipoFormularioScreen() {
 function Section({ children, title }: { children: React.ReactNode; title: string }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <RidsSectionTitle title={title} />
       {children}
     </View>
   );
@@ -546,13 +553,13 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   chip: {
-    backgroundColor: colors.brandSoft,
-    borderRadius: 999,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   chipText: {
-    color: colors.brand,
+    color: ridsPalette.cyanDark,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -610,28 +617,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 21,
-    marginBottom: 22,
-    marginTop: 6,
-  },
   summaryCard: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 14,
-    marginBottom: 22,
-    padding: 16,
+    gap: 10,
+    marginBottom: 18,
+    padding: 11,
     ...shadow,
   },
   cardPressed: {
@@ -639,11 +634,11 @@ const styles = StyleSheet.create({
   },
   summaryIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 16,
-    height: 48,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
+    height: 38,
     justifyContent: 'center',
-    width: 48,
+    width: 38,
   },
   summaryCopy: {
     flex: 1,
@@ -662,19 +657,13 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
-  sectionTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 12,
-  },
   adicionalCard: {
     backgroundColor: colors.surface,
     borderColor: colors.line,
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 12,
-    padding: 14,
+    padding: 11,
   },
   adicionalHeader: {
     alignItems: 'center',
@@ -722,7 +711,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   segmentOptionActive: {
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
   },
   segmentText: {
     color: colors.muted,

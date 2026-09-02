@@ -18,6 +18,7 @@ import { getClientesCache, getClientesCached, searchEquipos } from '@/src/api/ri
 import { TextInput } from '@/src/components/AppTextInput';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { CalendarModal } from '@/src/components/CalendarModal';
+import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
 import { Screen } from '@/src/components/Screen';
 import { ESTADO_EQUIPO_OPTIONS, labelDeEstadoEquipo } from '@/src/equipos/equipo-opciones';
 import {
@@ -25,6 +26,7 @@ import {
   saveGestionarEquipoState,
 } from '@/src/equipos/gestionar-state';
 import { colors, shadow } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { Cliente, Equipo } from '@/src/types/api';
 
 export default function GestionarEquipoScreen() {
@@ -32,7 +34,6 @@ export default function GestionarEquipoScreen() {
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>(initialClientes);
   const [total, setTotal] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
   const [search, setSearch] = useState('');
   const [empresaId, setEmpresaId] = useState<number | null>(null);
   const [estadoFiltro, setEstadoFiltro] = useState<string | null>(null);
@@ -77,7 +78,6 @@ export default function GestionarEquipoScreen() {
       });
       pageRef.current = resp.page;
       hasMoreRef.current = resp.hasMore;
-      setHasMore(resp.hasMore);
       setTotal(resp.total);
       setEquipos((prev) => (reset ? resp.equipos : [...prev, ...resp.equipos]));
     } catch (error) {
@@ -128,11 +128,15 @@ export default function GestionarEquipoScreen() {
 
   return (
     <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
-      <Text style={styles.title}>Gestionar equipo</Text>
-      <Text style={styles.subtitle}>Busca por serial, marca, modelo o personal asignado, y filtra por empresa, estado o fecha.</Text>
+      <RidsFlowHeader
+        icon="construct-outline"
+        label="INVENTARIO TÉCNICO"
+        subtitle="Busca, filtra y actualiza equipos registrados"
+        title="Gestionar equipos"
+      />
 
       <View style={styles.searchBox}>
-        <Ionicons color={colors.muted} name="search-outline" size={20} />
+        <Ionicons color={ridsPalette.cyanDark} name="search-outline" size={20} />
         <TextInput
           onChangeText={setSearch}
           placeholder="Buscar equipo"
@@ -142,60 +146,71 @@ export default function GestionarEquipoScreen() {
         />
       </View>
 
-      <Text style={styles.filterLabel}>Empresa</Text>
-      <Pressable onPress={() => setPickerOpen('empresa')} style={styles.pickerButton}>
-        <Text style={styles.pickerButtonText}>
-          {empresaId ? (clientes.find((c) => c.id_empresa === empresaId)?.nombre ?? 'Empresa') : 'Todas las empresas'}
-        </Text>
-        <Ionicons color="#98A2B3" name="chevron-down" size={18} />
-      </Pressable>
-
-      <Text style={styles.filterLabel}>Estado del equipo</Text>
-      <Pressable onPress={() => setPickerOpen('estado')} style={styles.pickerButton}>
-        <Text style={styles.pickerButtonText}>
-          {estadoFiltro ? labelDeEstadoEquipo(estadoFiltro) : 'Todos los estados'}
-        </Text>
-        <Ionicons color="#98A2B3" name="chevron-down" size={18} />
-      </Pressable>
-
-      <Pressable onPress={() => setMostrarFiltrosFecha((v) => !v)} style={styles.toggleFechas}>
-        <Ionicons color={colors.brand} name={mostrarFiltrosFecha ? 'chevron-up' : 'chevron-down'} size={16} />
-        <Text style={styles.toggleFechasText}>
-          Filtrar por fecha {hayFiltrosFechaActivos ? '(activo)' : ''}
-        </Text>
-      </Pressable>
-
-      {mostrarFiltrosFecha && (
-        <View style={styles.fechasBox}>
-          <Text style={styles.fechasGrupoLabel}>Fecha de ingreso</Text>
-          <View style={styles.fechasRow}>
-            <DateFieldButton onPress={() => setCalendarTarget('ingresoDesde')} placeholder="Desde" value={ingresoDesde} />
-            <DateFieldButton onPress={() => setCalendarTarget('ingresoHasta')} placeholder="Hasta" value={ingresoHasta} />
-          </View>
-
-          <Text style={styles.fechasGrupoLabel}>Fecha de edición</Text>
-          <View style={styles.fechasRow}>
-            <DateFieldButton onPress={() => setCalendarTarget('edicionDesde')} placeholder="Desde" value={edicionDesde} />
-            <DateFieldButton onPress={() => setCalendarTarget('edicionHasta')} placeholder="Hasta" value={edicionHasta} />
-          </View>
-
-          {hayFiltrosFechaActivos && (
-            <Pressable
-              onPress={() => {
-                setIngresoDesde('');
-                setIngresoHasta('');
-                setEdicionDesde('');
-                setEdicionHasta('');
-              }}
-              style={styles.limpiarFechas}>
-              <Text style={styles.limpiarFechasText}>Limpiar filtros de fecha</Text>
+      <View style={styles.filtersPanel}>
+        <View style={styles.filterFieldsRow}>
+          <View style={styles.filterField}>
+            <Text style={styles.filterLabel}>Empresa</Text>
+            <Pressable onPress={() => setPickerOpen('empresa')} style={styles.pickerButton}>
+              <Text numberOfLines={1} style={styles.pickerButtonText}>
+                {empresaId ? (clientes.find((c) => c.id_empresa === empresaId)?.nombre ?? 'Empresa') : 'Todas'}
+              </Text>
+              <Ionicons color="#98A2B3" name="chevron-down" size={15} />
             </Pressable>
-          )}
+          </View>
+
+          <View style={styles.filterField}>
+            <Text style={styles.filterLabel}>Estado</Text>
+            <Pressable onPress={() => setPickerOpen('estado')} style={styles.pickerButton}>
+              <Text numberOfLines={1} style={styles.pickerButtonText}>
+                {estadoFiltro ? labelDeEstadoEquipo(estadoFiltro) : 'Todos'}
+              </Text>
+              <Ionicons color="#98A2B3" name="chevron-down" size={15} />
+            </Pressable>
+          </View>
         </View>
-      )}
+
+        <Pressable onPress={() => setMostrarFiltrosFecha((v) => !v)} style={styles.toggleFechas}>
+          <Ionicons color={ridsPalette.cyanDark} name={mostrarFiltrosFecha ? 'chevron-up' : 'chevron-down'} size={16} />
+          <Text style={styles.toggleFechasText}>
+            Filtrar por fecha {hayFiltrosFechaActivos ? '(activo)' : ''}
+          </Text>
+        </Pressable>
+
+        {mostrarFiltrosFecha && (
+          <View style={styles.fechasBox}>
+            <Text style={styles.fechasGrupoLabel}>Fecha de ingreso</Text>
+            <View style={styles.fechasRow}>
+              <DateFieldButton onPress={() => setCalendarTarget('ingresoDesde')} placeholder="Desde" value={ingresoDesde} />
+              <DateFieldButton onPress={() => setCalendarTarget('ingresoHasta')} placeholder="Hasta" value={ingresoHasta} />
+            </View>
+
+            <Text style={styles.fechasGrupoLabel}>Fecha de edición</Text>
+            <View style={styles.fechasRow}>
+              <DateFieldButton onPress={() => setCalendarTarget('edicionDesde')} placeholder="Desde" value={edicionDesde} />
+              <DateFieldButton onPress={() => setCalendarTarget('edicionHasta')} placeholder="Hasta" value={edicionHasta} />
+            </View>
+
+            {hayFiltrosFechaActivos && (
+              <Pressable
+                onPress={() => {
+                  setIngresoDesde('');
+                  setIngresoHasta('');
+                  setEdicionDesde('');
+                  setEdicionHasta('');
+                }}
+                style={styles.limpiarFechas}>
+                <Text style={styles.limpiarFechasText}>Limpiar fechas</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+      </View>
 
       {loading ? <ActivityIndicator color={colors.brand} style={styles.loader} /> : null}
-      <Text style={styles.countText}>{total} equipo(s)</Text>
+      <View style={styles.countRow}>
+        <Text style={styles.countLabel}>Resultados</Text>
+        <View style={styles.countBadge}><Text style={styles.countText}>{total}</Text></View>
+      </View>
 
       <FlatList
         contentContainerStyle={styles.list}
@@ -212,37 +227,45 @@ export default function GestionarEquipoScreen() {
             onPress={() => selectEquipo(equipo)}
             style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
             <View style={styles.cardIcon}>
-              <Ionicons color={colors.brand} name="laptop-outline" size={24} />
+              <Ionicons color={ridsPalette.cyanDark} name="laptop-outline" size={20} />
             </View>
             <View style={styles.cardCopy}>
-              <Text style={styles.cardTitle}>{equipo.serial || 'Equipo sin serial'}</Text>
-              <Text style={styles.cardText}>
-                {[equipo.marca, equipo.modelo, equipo.nombreSolicitante].filter(Boolean).join(' · ') || 'Datos por completar'}
-              </Text>
-              <View style={styles.cardMetaRow}>
+              <View style={styles.cardTitleRow}>
+                <Text numberOfLines={1} style={styles.cardTitle}>{equipo.serial || 'Equipo sin serial'}</Text>
                 {equipo.estado ? <Text style={styles.cardBadge}>{labelDeEstadoEquipo(equipo.estado)}</Text> : null}
+              </View>
+              <Text numberOfLines={1} style={styles.cardText}>
+                {[equipo.marca, equipo.modelo].filter(Boolean).join(' · ') || 'Marca y modelo por completar'}
+              </Text>
+              <View style={styles.assigneeRow}>
+                <Ionicons color={ridsPalette.slate} name="person-outline" size={12} />
+                <Text style={styles.assigneeText}>{equipo.nombreSolicitante || 'Sin solicitante asignado'}</Text>
+              </View>
+              {equipo.tieneAgente || equipo.tieneMantencion || equipo.tieneOneDrive ? (
+                <View style={styles.cardMetaRow}>
                 {equipo.tieneAgente ? (
                   <View style={styles.cardIndicator}>
-                    <Ionicons color={colors.brand} name="hardware-chip-outline" size={14} />
+                    <Ionicons color={ridsPalette.cyanDark} name="hardware-chip-outline" size={12} />
                   </View>
                 ) : null}
                 {equipo.tieneMantencion ? (
                   <View style={styles.cardIndicator}>
-                    <Ionicons color={colors.brand} name="build-outline" size={14} />
+                    <Ionicons color={ridsPalette.cyanDark} name="build-outline" size={12} />
                   </View>
                 ) : null}
                 {equipo.tieneOneDrive ? (
                   <View style={styles.cardIndicator}>
                     <Ionicons
-                      color={colors.brand}
+                      color={ridsPalette.cyanDark}
                       name="cloud-outline"
-                      size={14}
+                      size={12}
                     />
                   </View>
                 ) : null}
-              </View>
+                </View>
+              ) : null}
             </View>
-            <Ionicons color="#B7C0CE" name="chevron-forward" size={20} />
+            <Ionicons color="#B7C0CE" name="chevron-forward" size={17} />
           </Pressable>
         )}
         scrollIndicatorInsets={{ bottom: 150 }}
@@ -333,18 +356,6 @@ function DateFieldButton({
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 21,
-    marginBottom: 18,
-    marginTop: 6,
-  },
   searchBox: {
     alignItems: 'center',
     backgroundColor: colors.surface,
@@ -362,29 +373,46 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
   },
+  filtersPanel: {
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 10,
+    padding: 11,
+  },
+  filterFieldsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterField: {
+    flex: 1,
+    minWidth: 0,
+  },
   filterLabel: {
-    color: colors.muted,
-    fontSize: 12,
+    color: ridsPalette.slate,
+    fontSize: 10,
     fontWeight: '800',
-    marginTop: 14,
     textTransform: 'uppercase',
   },
   pickerButton: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 14,
+    borderRadius: 11,
     borderWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
-    minHeight: 48,
-    paddingHorizontal: 14,
+    marginTop: 5,
+    minHeight: 42,
+    paddingHorizontal: 10,
   },
   pickerButtonText: {
     color: colors.ink,
-    fontSize: 15,
+    flex: 1,
+    fontSize: 12,
     fontWeight: '700',
+    marginRight: 4,
   },
   modalOverlay: {
     backgroundColor: 'rgba(15, 23, 42, 0.45)',
@@ -428,40 +456,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 6,
-    marginTop: 14,
+    marginTop: 9,
+    minHeight: 28,
   },
   toggleFechasText: {
-    color: colors.brand,
-    fontSize: 13,
+    color: ridsPalette.cyanDark,
+    fontSize: 12,
     fontWeight: '800',
   },
   fechasBox: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.line,
     borderRadius: 14,
     borderWidth: 1,
-    marginTop: 10,
-    padding: 12,
+    marginTop: 7,
+    padding: 10,
   },
   fechasGrupoLabel: {
     color: colors.ink,
     fontSize: 12,
     fontWeight: '800',
-    marginBottom: 6,
+    marginBottom: 5,
   },
   fechasRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   fechaInput: {
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.surface,
     borderColor: colors.line,
     borderRadius: 10,
     borderWidth: 1,
     flex: 1,
     justifyContent: 'center',
-    minHeight: 40,
+    minHeight: 36,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
@@ -485,16 +514,32 @@ const styles = StyleSheet.create({
   loader: {
     marginTop: 18,
   },
-  countText: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '700',
+  countRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 12,
   },
+  countLabel: {
+    color: ridsPalette.charcoal,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  countBadge: {
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  countText: {
+    color: ridsPalette.cyanDark,
+    fontSize: 11,
+    fontWeight: '900',
+  },
   list: {
-    gap: 12,
+    gap: 8,
     paddingBottom: 190,
-    paddingTop: 14,
+    paddingTop: 10,
   },
   listScroll: {
     flex: 1,
@@ -503,54 +548,75 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 14,
-    padding: 16,
+    gap: 10,
+    minHeight: 66,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   cardPressed: {
     transform: [{ scale: 0.99 }],
   },
   cardIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 15,
-    height: 46,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
+    height: 38,
     justifyContent: 'center',
-    width: 46,
+    width: 38,
   },
   cardCopy: {
     flex: 1,
   },
   cardTitle: {
     color: colors.ink,
-    fontSize: 16,
+    flex: 1,
+    fontSize: 14,
     fontWeight: '900',
+  },
+  cardTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
   },
   cardText: {
     color: colors.muted,
-    fontSize: 13,
+    fontSize: 11,
+    marginTop: 3,
+  },
+  assigneeRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 4,
     marginTop: 4,
   },
-  cardBadge: {
-    color: colors.brand,
+  assigneeText: {
+    color: ridsPalette.charcoalSoft,
+    flex: 1,
     fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
+  },
+  cardBadge: {
+    color: ridsPalette.cyanDark,
+    fontSize: 9,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   cardMetaRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+    gap: 5,
+    marginTop: 5,
   },
   cardIndicator: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 999,
-    height: 22,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 9,
+    height: 18,
     justifyContent: 'center',
-    width: 22,
+    width: 18,
   },
 });

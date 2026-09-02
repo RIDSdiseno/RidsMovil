@@ -14,6 +14,8 @@ import { AppButton } from '@/src/components/AppButton';
 import { TextInput } from '@/src/components/AppTextInput';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { EditableSelect } from '@/src/components/EditableSelect';
+import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
+import { RidsSectionTitle } from '@/src/components/RidsSectionTitle';
 import { Screen } from '@/src/components/Screen';
 import {
   ESTADO_EQUIPO_OPTIONS,
@@ -30,6 +32,7 @@ import {
   saveGestionarEquipoState,
 } from '@/src/equipos/gestionar-state';
 import { colors, shadow } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { EquipoDetalle, Solicitante } from '@/src/types/api';
 import { getSolicitanteId } from '@/src/visitas/visita-utils';
 
@@ -568,12 +571,16 @@ export default function GestionarEquipoDetalleScreen() {
         refreshing
       }
     >
-      <Text style={styles.title}>Editar equipo</Text>
-      <Text style={styles.subtitle}>{equipo.serial || 'Equipo sin serial'}</Text>
+      <RidsFlowHeader
+        icon="create-outline"
+        label="EDICIÓN DE EQUIPO"
+        subtitle="Actualiza especificaciones, credenciales y asignación"
+        title={equipo.serial || 'Equipo sin serial'}
+      />
 
       <Pressable onPress={volverASeleccionarEquipo} style={({ pressed }) => [styles.summaryCard, pressed && styles.cardPressed]}>
         <View style={styles.summaryIcon}>
-          <Ionicons color={colors.brand} name="laptop-outline" size={24} />
+          <Ionicons color={ridsPalette.cyanDark} name="laptop-outline" size={23} />
         </View>
         <View style={styles.summaryCopy}>
           <Text style={styles.summaryTitle}>{[equipo.marca, equipo.modelo].filter(Boolean).join(' ') || 'Equipo'}</Text>
@@ -956,7 +963,7 @@ export default function GestionarEquipoDetalleScreen() {
 function Section({ children, title }: { children: React.ReactNode; title: string }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <RidsSectionTitle title={title} />
       {children}
     </View>
   );
@@ -1027,28 +1034,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 21,
-    marginBottom: 22,
-    marginTop: 6,
-  },
   summaryCard: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 14,
-    marginBottom: 16,
-    padding: 16,
+    gap: 10,
+    marginBottom: 12,
+    padding: 11,
     ...shadow,
   },
   cardPressed: {
@@ -1056,11 +1051,11 @@ const styles = StyleSheet.create({
   },
   summaryIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 16,
-    height: 48,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
+    height: 38,
     justifyContent: 'center',
-    width: 48,
+    width: 38,
   },
   summaryCopy: {
     flex: 1,
@@ -1077,10 +1072,12 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   auditCard: {
-    backgroundColor: colors.brandSoft,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderColor: '#BDE9EC',
     borderRadius: 14,
-    marginBottom: 22,
-    padding: 12,
+    borderWidth: 1,
+    marginBottom: 18,
+    padding: 10,
   },
   auditTitle: {
     color: colors.ink,
@@ -1097,12 +1094,6 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
-  sectionTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 12,
-  },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1111,13 +1102,13 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   chip: {
-    backgroundColor: colors.brandSoft,
-    borderRadius: 999,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   chipText: {
-    color: colors.brand,
+    color: ridsPalette.cyanDark,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -1181,7 +1172,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 12,
-    padding: 14,
+    padding: 11,
   },
   adicionalHeader: {
     alignItems: 'center',
@@ -1229,7 +1220,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   segmentOptionActive: {
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
   },
   segmentText: {
     color: colors.muted,
@@ -1283,7 +1274,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: 7,
   },
   infoRowLabel: {
     color: colors.ink,
@@ -1359,7 +1350,7 @@ const styles = StyleSheet.create({
 
   softwareHeaderIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
+    backgroundColor: ridsPalette.cyanSoft,
     borderRadius: 12,
     height: 40,
     justifyContent: 'center',

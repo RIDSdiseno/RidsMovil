@@ -16,8 +16,11 @@ import {
 import { useAuth } from '@/src/auth/AuthContext';
 import { AppButton } from '@/src/components/AppButton';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
+import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
+import { RidsSectionTitle } from '@/src/components/RidsSectionTitle';
 import { Screen } from '@/src/components/Screen';
-import { colors, shadow } from '@/src/theme/colors';
+import { colors } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { ActividadesVisita } from '@/src/types/api';
 import {
   clearVisitaState,
@@ -403,14 +406,18 @@ export default function FormularioVisitaScreen() {
 
   return (
     <Screen bottomNavigation={<BottomNavigation />} onRefresh={refreshScreen} refreshing={refreshing}>
-      <Text style={styles.title}>Formulario</Text>
-      <Text style={styles.subtitle}>{visitaState.empresaNombre}</Text>
+      <RidsFlowHeader
+        icon="clipboard-outline"
+        label="FORMULARIO DE VISITA"
+        subtitle="Completa las actividades realizadas"
+        title={visitaState.empresaNombre || 'Visita técnica'}
+      />
 
       <Pressable
         onPress={() => router.replace('/visitas/solicitantes')}
         style={({ pressed }) => [styles.summaryCard, pressed && styles.cardPressed]}>
         <View style={styles.summaryIcon}>
-          <Ionicons color={colors.brand} name="people-outline" size={24} />
+          <Ionicons color={ridsPalette.cyanDark} name="people-outline" size={23} />
         </View>
         <View style={styles.summaryCopy}>
           <Text style={styles.summaryTitle}>{visitaState.solicitantes.length} solicitante(s)</Text>
@@ -422,7 +429,7 @@ export default function FormularioVisitaScreen() {
       <Section title="Ubicacion">
         <View style={styles.locationCard}>
           <View style={styles.locationIcon}>
-            <Ionicons color={colors.brand} name={hasLocation ? 'location' : 'location-outline'} size={24} />
+            <Ionicons color={ridsPalette.cyanDark} name={hasLocation ? 'location' : 'location-outline'} size={23} />
           </View>
           <View style={styles.locationCopy}>
             <Text style={styles.locationTitle}>{hasLocation ? 'Ubicacion registrada' : 'Sin ubicacion'}</Text>
@@ -514,7 +521,7 @@ function confirmarAgendaCompletada(estado: string) {
 function Section({ children, title }: { children: React.ReactNode; title: string }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <RidsSectionTitle title={title} />
       {children}
     </View>
   );
@@ -526,82 +533,63 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 21,
-    marginBottom: 22,
-    marginTop: 6,
-  },
   summaryCard: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 14,
-    marginBottom: 22,
-    padding: 16,
-    ...shadow,
+    gap: 10,
+    marginBottom: 18,
+    padding: 11,
   },
   cardPressed: {
     transform: [{ scale: 0.99 }],
   },
   summaryIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 16,
-    height: 48,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
+    height: 38,
     justifyContent: 'center',
-    width: 48,
+    width: 38,
   },
   summaryCopy: {
     flex: 1,
   },
   summaryTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '900',
   },
   summaryText: {
     color: colors.muted,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 3,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
   },
   section: {
     marginBottom: 24,
-  },
-  sectionTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 12,
   },
   locationCard: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-    padding: 14,
+    gap: 9,
+    marginBottom: 9,
+    padding: 10,
   },
   locationIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 16,
-    height: 46,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 11,
+    height: 36,
     justifyContent: 'center',
-    width: 46,
+    width: 36,
   },
   locationCopy: {
     flex: 1,
@@ -644,8 +632,8 @@ const styles = StyleSheet.create({
     width: 20,
   },
   checkboxActive: {
-    backgroundColor: colors.brand,
-    borderColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
+    borderColor: ridsPalette.cyanDark,
   },
   activityText: {
     color: colors.ink,

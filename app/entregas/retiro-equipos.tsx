@@ -8,9 +8,12 @@ import { TextInput } from '@/src/components/AppTextInput';
 import { getEquiposCached } from '@/src/api/rids';
 import { AppButton } from '@/src/components/AppButton';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
+import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
+import { RidsSectionTitle } from '@/src/components/RidsSectionTitle';
 import { Screen } from '@/src/components/Screen';
 import { EntregaEnCursoState, loadEntregaState, saveEntregaState } from '@/src/entregas/entrega-state';
-import { colors, shadow } from '@/src/theme/colors';
+import { colors } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { Equipo } from '@/src/types/api';
 
 export default function RetiroEquiposScreen() {
@@ -165,8 +168,12 @@ export default function RetiroEquiposScreen() {
 
   return (
     <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
-      <Text style={styles.title}>{entregaState.brand === 'econnet' ? 'Producto a retirar' : 'Equipos a retirar'}</Text>
-      <Text style={styles.subtitle}>{entregaState.empresa?.nombre}</Text>
+      <RidsFlowHeader
+        icon={entregaState.brand === 'econnet' ? 'cube-outline' : 'hardware-chip-outline'}
+        label={`${entregaState.brand === 'econnet' ? 'ECONNET' : 'RIDS'} · RETIRO`}
+        subtitle={entregaState.empresa?.nombre}
+        title={entregaState.brand === 'econnet' ? 'Productos a retirar' : 'Equipos a retirar'}
+      />
 
       <View style={styles.actions}>
         <AppButton
@@ -179,6 +186,7 @@ export default function RetiroEquiposScreen() {
       {entregaState.brand === 'econnet' ? (
         <>
           <View style={styles.productForm}>
+            <RidsSectionTitle title="Agregar producto" />
             <TextInput
               onChangeText={(value) => setProductoForm((current) => ({ ...current, nombre: value }))}
               placeholder="Nombre producto"
@@ -212,11 +220,16 @@ export default function RetiroEquiposScreen() {
             <AppButton onPress={addProducto} title="Agregar producto" variant="secondary" />
           </View>
 
+          <View style={styles.countRow}>
+            <Text style={styles.countLabel}>Productos agregados</Text>
+            <View style={styles.countBadge}><Text style={styles.countText}>{entregaState.retiroProductos.length}</Text></View>
+          </View>
+
           <ScrollView contentContainerStyle={styles.list} scrollIndicatorInsets={{ bottom: 150 }} style={styles.listScroll} showsVerticalScrollIndicator={false}>
             {entregaState.retiroProductos.map((producto) => (
               <Pressable key={producto.id} onPress={() => removeProducto(producto.id)} style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
                 <View style={styles.icon}>
-                  <Ionicons color={colors.brand} name="cube-outline" size={24} />
+                  <Ionicons color={ridsPalette.cyanDark} name="cube-outline" size={23} />
                 </View>
                 <View style={styles.copy}>
                   <Text style={styles.cardTitle}>{producto.nombre}</Text>
@@ -227,23 +240,37 @@ export default function RetiroEquiposScreen() {
                 <Ionicons color="#DC2626" name="trash-outline" size={20} />
               </Pressable>
             ))}
-            {!entregaState.retiroProductos.length ? <Text style={styles.emptyText}>Agrega los productos que se retiraran.</Text> : null}
+            {!entregaState.retiroProductos.length ? (
+              <View style={styles.emptyState}>
+                <Ionicons color={ridsPalette.cyanDark} name="cube-outline" size={25} />
+                <Text style={styles.emptyTitle}>Sin productos agregados</Text>
+                <Text style={styles.emptyText}>Completa el formulario superior para registrar el retiro.</Text>
+              </View>
+            ) : null}
           </ScrollView>
         </>
       ) : (
         <>
-          <TextInput
-            onChangeText={setSearch}
-            placeholder="Buscar por serial, marca, modelo o usuario"
-            placeholderTextColor="#98A2B3"
-            style={styles.input}
-            value={search}
-          />
+          <View style={styles.searchBox}>
+            <Ionicons color={ridsPalette.cyanDark} name="search-outline" size={20} />
+            <TextInput
+              onChangeText={setSearch}
+              placeholder="Buscar por serial, marca, modelo o usuario"
+              placeholderTextColor="#98A2B3"
+              style={styles.searchInput}
+              value={search}
+            />
+            {search ? (
+              <Pressable hitSlop={10} onPress={() => setSearch('')}>
+                <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+              </Pressable>
+            ) : null}
+          </View>
 
-          <Text style={styles.helperText}>
-            {filteredEquipos.length} equipo{filteredEquipos.length === 1 ? '' : 's'} disponible
-            {filteredEquipos.length === 1 ? '' : 's'}
-          </Text>
+          <View style={styles.countRow}>
+            <Text style={styles.countLabel}>Equipos disponibles</Text>
+            <View style={styles.countBadge}><Text style={styles.countText}>{filteredEquipos.length}</Text></View>
+          </View>
 
           <ScrollView
             contentContainerStyle={styles.list}
@@ -262,7 +289,7 @@ export default function RetiroEquiposScreen() {
                   onPress={() => toggleEquipo(equipo)}
                   style={({ pressed }) => [styles.card, selected && styles.cardSelected, pressed && styles.cardPressed]}>
                   <View style={styles.icon}>
-                    <Ionicons color={colors.brand} name="hardware-chip-outline" size={24} />
+                    <Ionicons color={ridsPalette.cyanDark} name="hardware-chip-outline" size={23} />
                   </View>
                   <View style={styles.copy}>
                     <Text style={styles.cardTitle}>{formatEquipoTitle(equipo)}</Text>
@@ -275,7 +302,13 @@ export default function RetiroEquiposScreen() {
                 </Pressable>
               );
             })}
-            {!filteredEquipos.length ? <Text style={styles.emptyText}>No hay equipos para esta empresa.</Text> : null}
+            {!filteredEquipos.length ? (
+              <View style={styles.emptyState}>
+                <Ionicons color={ridsPalette.cyanDark} name="hardware-chip-outline" size={25} />
+                <Text style={styles.emptyTitle}>Sin equipos disponibles</Text>
+                <Text style={styles.emptyText}>No hay equipos asociados a esta empresa.</Text>
+              </View>
+            ) : null}
           </ScrollView>
         </>
       )}
@@ -293,18 +326,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 21,
-    marginBottom: 18,
-    marginTop: 6,
-  },
   actions: {
     gap: 10,
     marginBottom: 14,
@@ -321,20 +342,58 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   productForm: {
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: 16,
+    borderWidth: 1,
     gap: 10,
+    padding: 14,
   },
   textarea: {
     minHeight: 86,
     textAlignVertical: 'top',
   },
-  helperText: {
-    color: colors.muted,
+  searchBox: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: 15,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 52,
+    paddingHorizontal: 14,
+  },
+  searchInput: {
+    color: colors.ink,
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 11,
+  },
+  countRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  countLabel: {
+    color: ridsPalette.charcoal,
     fontSize: 13,
-    fontWeight: '700',
-    marginTop: 10,
+    fontWeight: '800',
+  },
+  countBadge: {
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  countText: {
+    color: ridsPalette.cyanDark,
+    fontSize: 11,
+    fontWeight: '900',
   },
   list: {
-    gap: 12,
+    gap: 8,
     paddingBottom: 190,
     paddingTop: 14,
   },
@@ -345,28 +404,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 12,
-    minHeight: 92,
-    padding: 14,
-    ...shadow,
+    gap: 9,
+    minHeight: 72,
+    padding: 10,
   },
   cardSelected: {
-    borderColor: colors.brand,
-    borderWidth: 2,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderColor: ridsPalette.cyanDark,
   },
   cardPressed: {
     transform: [{ scale: 0.99 }],
   },
   icon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 14,
-    height: 44,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 11,
+    height: 36,
     justifyContent: 'center',
-    width: 44,
+    width: 36,
   },
   copy: {
     flex: 1,
@@ -391,14 +449,28 @@ const styles = StyleSheet.create({
     width: 28,
   },
   checkboxActive: {
-    backgroundColor: colors.brand,
-    borderColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
+    borderColor: ridsPalette.cyanDark,
+  },
+  emptyState: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 22,
+  },
+  emptyTitle: {
+    color: ridsPalette.charcoal,
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 8,
   },
   emptyText: {
-    color: colors.muted,
-    fontSize: 14,
-    fontWeight: '700',
-    paddingTop: 18,
+    color: ridsPalette.slate,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
     textAlign: 'center',
   },
 });

@@ -7,9 +7,11 @@ import { TextInput } from '@/src/components/AppTextInput';
 
 import { getClientesCached } from '@/src/api/rids';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
+import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
 import { Screen } from '@/src/components/Screen';
 import { EquipoNuevoState, getInitialEquipoState, loadEquipoState, saveEquipoState } from '@/src/equipos/equipo-state';
-import { colors, shadow } from '@/src/theme/colors';
+import { colors } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { Cliente } from '@/src/types/api';
 
 export default function AgregarEquipoEmpresaScreen() {
@@ -74,23 +76,37 @@ export default function AgregarEquipoEmpresaScreen() {
 
   return (
     <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
-      <Text style={styles.title}>Empresa</Text>
-      <Text style={styles.subtitle}>Selecciona la empresa propietaria del equipo.</Text>
-
-      <TextInput
-        onChangeText={setSearch}
-        placeholder="Buscar empresa o RUT"
-        placeholderTextColor="#98A2B3"
-        style={styles.input}
-        value={search}
+      <RidsFlowHeader
+        icon="business-outline"
+        label="NUEVO EQUIPO · PASO 1 DE 3"
+        subtitle="Define quién será el propietario"
+        title="Selecciona la empresa"
       />
+
+      <View style={styles.searchBox}>
+        <Ionicons color={ridsPalette.cyanDark} name="search-outline" size={20} />
+        <TextInput
+          onChangeText={setSearch}
+          placeholder="Buscar empresa o RUT"
+          placeholderTextColor="#98A2B3"
+          style={styles.input}
+          value={search}
+        />
+        {search ? (
+          <Pressable hitSlop={10} onPress={() => setSearch('')}>
+            <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+          </Pressable>
+        ) : null}
+      </View>
 
       {loading ? <ActivityIndicator color={colors.brand} style={styles.loader} /> : null}
 
-      <Text style={styles.countText}>
-        {filteredClientes.length} empresa{filteredClientes.length === 1 ? '' : 's'} disponible
-        {filteredClientes.length === 1 ? '' : 's'}
-      </Text>
+      <View style={styles.countRow}>
+        <Text style={styles.countLabel}>Empresas disponibles</Text>
+        <View style={styles.countBadge}>
+          <Text style={styles.countText}>{filteredClientes.length}</Text>
+        </View>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.companyList}
@@ -100,6 +116,13 @@ export default function AgregarEquipoEmpresaScreen() {
         scrollIndicatorInsets={{ bottom: 150 }}
         style={styles.companyScroll}
         showsVerticalScrollIndicator={false}>
+        {!loading && filteredClientes.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons color={ridsPalette.cyanDark} name="business-outline" size={25} />
+            <Text style={styles.emptyTitle}>Sin empresas</Text>
+            <Text style={styles.emptyText}>No encontramos resultados para esa búsqueda.</Text>
+          </View>
+        ) : null}
         {filteredClientes.map((cliente) => (
           <EmpresaCard
             cliente={cliente}
@@ -122,7 +145,7 @@ function EmpresaCard({ cliente, onPress, selected }: { cliente: Cliente; onPress
       style={({ pressed }) => [styles.companyCard, selected && styles.companyCardSelected, pressed && styles.companyPressed]}>
       <View style={styles.companyHeader}>
         <View style={styles.companyIcon}>
-          <Ionicons color={colors.brand} name="business-outline" size={21} />
+          <Ionicons color={ridsPalette.cyanDark} name="business-outline" size={21} />
         </View>
         {selected ? (
           <View style={styles.companyCheck}>
@@ -139,42 +162,54 @@ function EmpresaCard({ cliente, onPress, selected }: { cliente: Cliente; onPress
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 21,
-    marginBottom: 22,
-    marginTop: 6,
-  },
-  input: {
+  searchBox: {
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 14,
+    borderRadius: 15,
     borderWidth: 1,
-    color: colors.ink,
-    fontSize: 15,
+    flexDirection: 'row',
+    gap: 10,
     minHeight: 52,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+  },
+  input: {
+    color: colors.ink,
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 11,
   },
   loader: {
     marginVertical: 14,
   },
-  countText: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '700',
+  countRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 12,
+  },
+  countLabel: {
+    color: ridsPalette.charcoal,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  countBadge: {
+    alignItems: 'center',
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 12,
+    minWidth: 30,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  countText: {
+    color: ridsPalette.cyanDark,
+    fontSize: 11,
+    fontWeight: '900',
   },
   companyList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
     paddingBottom: 190,
     paddingTop: 14,
   },
@@ -184,16 +219,15 @@ const styles = StyleSheet.create({
   companyCard: {
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    minHeight: 142,
-    padding: 13,
-    width: '48%',
-    ...shadow,
+    minHeight: 120,
+    padding: 10,
+    width: '48.7%',
   },
   companyCardSelected: {
-    backgroundColor: colors.brandSoft,
-    borderColor: colors.brand,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderColor: ridsPalette.cyanDark,
   },
   companyPressed: {
     transform: [{ scale: 0.99 }],
@@ -202,19 +236,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   companyIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 14,
-    height: 42,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 11,
+    height: 36,
     justifyContent: 'center',
-    width: 42,
+    width: 36,
   },
   companyTitle: {
     color: colors.ink,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
     lineHeight: 18,
   },
@@ -222,14 +256,35 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 11,
     lineHeight: 15,
-    marginTop: 6,
+    marginTop: 4,
   },
   companyCheck: {
     alignItems: 'center',
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
     borderRadius: 12,
     height: 24,
     justifyContent: 'center',
     width: 24,
+  },
+  emptyState: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 24,
+    width: '100%',
+  },
+  emptyTitle: {
+    color: ridsPalette.charcoal,
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 8,
+  },
+  emptyText: {
+    color: ridsPalette.slate,
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });

@@ -8,9 +8,11 @@ import { TextInput } from '@/src/components/AppTextInput';
 
 import { crearClienteEconnet, getClientesCached, getClientesPickupEconnetCached } from '@/src/api/rids';
 import { AppButton } from '@/src/components/AppButton';
+import { RidsModuleBanner } from '@/src/components/RidsModuleBanner';
 import { Screen } from '@/src/components/Screen';
 import { EntregaBrand, getInitialEntregaState, loadEntregaState, PickUpOperation, saveEntregaState } from '@/src/entregas/entrega-state';
-import { colors, shadow } from '@/src/theme/colors';
+import { colors } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { Cliente } from '@/src/types/api';
 
 // Clave única de empresa: el id_empresa puede repetirse entre RIDS y econnet.
@@ -161,28 +163,45 @@ export default function EntregasScreen() {
 
   return (
     <Screen scroll={false}>
-      <Text style={styles.title}>PickUP</Text>
-      <Text style={styles.subtitle}>Selecciona empresa para realizar entrega o retiro</Text>
+      <RidsModuleBanner
+        icon="cube-outline"
+        label="ENTREGAS Y RETIROS"
+        title="¿Qué empresa atenderás?"
+      />
 
       {!selectedBrand ? (
-        <View style={styles.brandGrid}>
-          <BrandCard brand="rids" logo={require('../../assets/images/logo-rids.png')} onPress={selectBrand} />
-          <BrandCard brand="econnet" logo={require('../../assets/images/logo-econnet.png')} onPress={selectBrand} />
-        </View>
+        <>
+          <View style={styles.selectionHeader}>
+            <Text style={styles.selectionTitle}>Selecciona empresa</Text>
+            <View style={styles.selectionLine} />
+          </View>
+          <View style={styles.brandGrid}>
+            <BrandCard brand="rids" logo={require('../../assets/images/logo-rids.png')} onPress={selectBrand} />
+            <BrandCard brand="econnet" logo={require('../../assets/images/logo-econnet.png')} onPress={selectBrand} />
+          </View>
+        </>
       ) : (
         <>
           <Pressable onPress={() => setSelectedBrand(null)} style={styles.brandSelected}>
             <Text style={styles.brandSelectedText}>{selectedBrand === 'econnet' ? 'Econnet' : 'RIDS'}</Text>
-            <Ionicons color={colors.brand} name="swap-horizontal-outline" size={18} />
+            <Ionicons color={ridsPalette.cyanDark} name="swap-horizontal-outline" size={18} />
           </Pressable>
 
-          <TextInput
-            onChangeText={setSearch}
-            placeholder="Buscar empresa o RUT"
-            placeholderTextColor="#98A2B3"
-            style={styles.input}
-            value={search}
-          />
+          <View style={styles.searchBox}>
+            <Ionicons color={ridsPalette.cyanDark} name="search-outline" size={20} />
+            <TextInput
+              onChangeText={setSearch}
+              placeholder="Buscar empresa o RUT"
+              placeholderTextColor="#98A2B3"
+              style={styles.searchInput}
+              value={search}
+            />
+            {search ? (
+              <Pressable hitSlop={10} onPress={() => setSearch('')}>
+                <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+              </Pressable>
+            ) : null}
+          </View>
 
           <View style={styles.operationTabs}>
             <OperationTab label="Entrega" onPress={() => setOperation('entrega')} selected={operation === 'entrega'} />
@@ -194,6 +213,8 @@ export default function EntregasScreen() {
               <AppButton
                 onPress={() => setShowNewEmpresa(true)}
                 title="Nueva Empresa"
+                style={styles.newEmpresaButton}
+                textStyle={styles.newEmpresaButtonText}
                 variant="secondary"
               />
             </View>
@@ -275,12 +296,14 @@ export default function EntregasScreen() {
             </KeyboardAvoidingView>
           </Modal>
 
-          {loading ? <ActivityIndicator color={colors.brand} style={styles.loader} /> : null}
+          {loading ? <ActivityIndicator color={ridsPalette.cyanDark} style={styles.loader} /> : null}
 
-          <Text style={styles.countText}>
-            {filteredEmpresas.length} empresa{filteredEmpresas.length === 1 ? '' : 's'} disponible
-            {filteredEmpresas.length === 1 ? '' : 's'}
-          </Text>
+          <View style={styles.countRow}>
+            <Text style={styles.countTitle}>Empresas disponibles</Text>
+            <View style={styles.countBadge}>
+              <Text style={styles.countText}>{filteredEmpresas.length}</Text>
+            </View>
+          </View>
 
           <FlatList
             columnWrapperStyle={styles.companyRow}
@@ -289,7 +312,7 @@ export default function EntregasScreen() {
             keyExtractor={(empresa) => `${empresa.origen ?? 'RIDS'}:${empresa.id_empresa}`}
             numColumns={2}
             refreshControl={
-              <RefreshControl colors={[colors.brand]} onRefresh={refreshScreen} refreshing={refreshing} tintColor={colors.brand} />
+              <RefreshControl colors={[ridsPalette.cyanDark]} onRefresh={refreshScreen} refreshing={refreshing} tintColor={ridsPalette.cyanDark} />
             }
             renderItem={({ item: empresa }) => (
               <Pressable
@@ -301,14 +324,16 @@ export default function EntregasScreen() {
                 ]}>
                 <View style={styles.companyHeader}>
                   <View style={styles.companyIcon}>
-                    <Ionicons color={colors.brand} name="business-outline" size={21} />
+                    <Ionicons color={ridsPalette.cyanDark} name="business-outline" size={21} />
                   </View>
                   {selectedEmpresaKey === empresaKey(empresa) ? (
                     <View style={styles.companyCheck}>
                       <Ionicons color={colors.white} name="checkmark" size={14} />
                     </View>
                   ) : (
-                    <Ionicons color="#B7C0CE" name="chevron-forward" size={18} />
+                    <View style={styles.companyChevron}>
+                      <Ionicons color={ridsPalette.slate} name="chevron-forward" size={17} />
+                    </View>
                   )}
                 </View>
                 <Text numberOfLines={2} style={styles.companyTitle}>{empresa.nombre}</Text>
@@ -337,7 +362,19 @@ function BrandCard({
   onPress: (brand: EntregaBrand) => void;
 }) {
   return (
-    <Pressable onPress={() => onPress(brand)} style={({ pressed }) => [styles.brandCard, pressed && styles.companyPressed]}>
+    <Pressable
+      onPress={() => onPress(brand)}
+      style={({ pressed }) => [
+        styles.brandCard,
+        pressed && styles.companyPressed,
+      ]}>
+      <View style={styles.brandArrow}>
+        <Ionicons
+          color={ridsPalette.cyanDark}
+          name="arrow-forward"
+          size={18}
+        />
+      </View>
       <Image contentFit="contain" source={logo} style={styles.brandLogo} />
     </Pressable>
   );
@@ -389,18 +426,6 @@ function formatRut(value: string) {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: colors.ink,
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 21,
-    marginBottom: 22,
-    marginTop: 6,
-  },
   input: {
     backgroundColor: colors.surface,
     borderColor: colors.line,
@@ -465,7 +490,7 @@ const styles = StyleSheet.create({
     minHeight: 42,
   },
   tipoOptionActive: {
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
   },
   tipoText: {
     color: colors.muted,
@@ -493,7 +518,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   operationTabActive: {
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
   },
   operationText: {
     color: colors.muted,
@@ -504,18 +529,45 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   brandGrid: {
-    gap: 14,
+    gap: 12,
+  },
+  selectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  selectionTitle: {
+    color: ridsPalette.charcoal,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  selectionLine: {
+    backgroundColor: colors.line,
+    flex: 1,
+    height: 1,
   },
   brandCard: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 150,
-    padding: 22,
-    ...shadow,
+    minHeight: 142,
+    overflow: 'hidden',
+    padding: 20,
+  },
+  brandArrow: {
+    alignItems: 'center',
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 14,
+    height: 36,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 13,
+    top: 13,
+    width: 36,
   },
   brandLogo: {
     height: 86,
@@ -524,8 +576,8 @@ const styles = StyleSheet.create({
   brandSelected: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 999,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 13,
     flexDirection: 'row',
     gap: 8,
     marginBottom: 14,
@@ -533,23 +585,59 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   brandSelectedText: {
-    color: colors.brand,
+    color: ridsPalette.cyanDark,
     fontSize: 13,
     fontWeight: '900',
   },
   loader: {
     marginVertical: 14,
   },
+  searchBox: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: 15,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 9,
+    minHeight: 52,
+    paddingHorizontal: 14,
+  },
+  searchInput: {
+    color: ridsPalette.charcoal,
+    flex: 1,
+    fontSize: 15,
+    minHeight: 48,
+    paddingVertical: 10,
+  },
+  countRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 13,
+  },
+  countTitle: {
+    color: ridsPalette.charcoal,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  countBadge: {
+    alignItems: 'center',
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 13,
+    minWidth: 32,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
   countText: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 12,
+    color: ridsPalette.cyanDark,
+    fontSize: 12,
+    fontWeight: '900',
   },
   companyList: {
-    gap: 12,
+    gap: 8,
     paddingBottom: 190,
-    paddingTop: 18,
+    paddingTop: 12,
   },
   companyRow: {
     justifyContent: 'space-between',
@@ -561,15 +649,15 @@ const styles = StyleSheet.create({
   companyCard: {
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 1,
-    minHeight: 148,
-    padding: 14,
+    minHeight: 124,
+    padding: 10,
     width: '48.5%',
-    ...shadow,
   },
   companyCardSelected: {
-    borderColor: colors.brand,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderColor: ridsPalette.cyan,
     borderWidth: 2,
   },
   companyPressed: {
@@ -579,39 +667,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   companyIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
-    borderRadius: 14,
-    height: 42,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 11,
+    height: 36,
     justifyContent: 'center',
-    width: 42,
+    width: 36,
   },
   companyCheck: {
     alignItems: 'center',
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
     borderRadius: 12,
     height: 24,
     justifyContent: 'center',
     width: 24,
   },
   companyTitle: {
-    color: colors.ink,
+    color: ridsPalette.charcoal,
     // Los nombres de Econnet se guardan en mayusculas y son mas anchos, asi
     // que se acota el cuerpo y se limita a dos lineas para que todas las
     // tarjetas midan lo mismo.
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
-    lineHeight: 18,
+    lineHeight: 16,
   },
   companySubtitle: {
-    color: colors.muted,
+    color: ridsPalette.slate,
     fontSize: 12,
     // Ancla el RUT al pie: el titulo ocupa una o dos lineas segun la empresa y
     // sin esto quedaba a distinta altura en cada tarjeta.
     marginTop: 'auto',
-    paddingTop: 8,
+    paddingTop: 5,
+  },
+  companyChevron: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 11,
+    height: 24,
+    justifyContent: 'center',
+    width: 24,
+  },
+  newEmpresaButton: {
+    backgroundColor: ridsPalette.cyanSoft,
+  },
+  newEmpresaButtonText: {
+    color: ridsPalette.cyanDark,
   },
 });
