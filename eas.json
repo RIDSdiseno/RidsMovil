@@ -34,6 +34,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "connie018@gmail.com",
+        "ascAppId": "6796011146",
+        "appleTeamId": "3335AQGUHY"
+      }
+    }
   }
 }
