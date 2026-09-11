@@ -1,16 +1,24 @@
 // app/(tabs)/index.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { getMisVisitasAsignadasHoy, iniciarRutaVisitaAsignada, iniciarVisitaAsignada } from '@/src/api/rids';
+import {
+  cancelarVisita,
+  getMisVisitasAsignadasHoyCache,
+  getMisVisitasAsignadasHoyCached,
+  iniciarRutaVisitaAsignada,
+  iniciarVisitaAsignada,
+  setMisVisitasAsignadasHoyCache,
+} from '@/src/api/rids';
 import { useAuth } from '@/src/auth/AuthContext';
 import { RidsModuleBanner } from '@/src/components/RidsModuleBanner';
 import { Screen } from '@/src/components/Screen';
-import { loadEntregaState } from '@/src/entregas/entrega-state';
-import { loadEquipoState } from '@/src/equipos/equipo-state';
-import { loadGestionarEquipoState } from '@/src/equipos/gestionar-state';
+import { SwipeToCancelCard } from '@/src/components/SwipeToCancelCard';
+import { clearEntregaState, loadEntregaState } from '@/src/entregas/entrega-state';
+import { clearEquipoState, loadEquipoState } from '@/src/equipos/equipo-state';
+import { clearGestionarEquipoState, loadGestionarEquipoState } from '@/src/equipos/gestionar-state';
 import { colors, shadow } from '@/src/theme/colors';
 import { ridsPalette } from '@/src/theme/rids-palette';
 import { VisitaAsignada } from '@/src/types/api';
@@ -19,7 +27,7 @@ import { reconcileTrackingForAssignedAgendas } from '@/src/visitas/agenda-tracki
 import { reconcileDailyLocationTracking } from '@/src/visitas/daily-location-tracking';
 import { startVisitForEmpresa } from '@/src/visitas/start-visit-flow';
 import { formatDistanceMeters, getDistanceFromCurrentLocation } from '@/src/visitas/visit-distance';
-import { loadVisitaState } from '@/src/visitas/visita-state';
+import { clearVisitaState, loadVisitaState } from '@/src/visitas/visita-state';
 
 type ResumeRoute =
   | '/visitas/formulario'
@@ -33,6 +41,7 @@ type ResumeRoute =
 
 type WorkStatus = {
   icon: keyof typeof Ionicons.glyphMap;
+  kind: 'IDLE' | 'VISITA_MANUAL' | 'VISITA_AGENDA' | 'ENTREGA' | 'EQUIPO_NUEVO' | 'EQUIPO_GESTION';
   route: ResumeRoute | '/(tabs)/visitas';
   text: string;
   title: string;
@@ -40,6 +49,7 @@ type WorkStatus = {
 
 const idleStatus: WorkStatus = {
   icon: 'navigate-outline',
+  kind: 'IDLE',
   route: '/(tabs)/visitas',
   text: 'Selecciona una empresa, selecciona los solicitantes y completa las actividades.',
   title: 'Listo para iniciar una visita',
@@ -47,13 +57,16 @@ const idleStatus: WorkStatus = {
 
 export default function DashboardScreen() {
   const { isLoading, tecnico } = useAuth();
-  const [agendaToday, setAgendaToday] = useState<VisitaAsignada[]>([]);
-  const [loadingAgenda, setLoadingAgenda] = useState(false);
-  const [startingRouteId, setStartingRouteId] = useState<number | null>(null);
-  const [startingVisitId, setStartingVisitId] = useState<number | null>(null);
-  const [workStatus, setWorkStatus] = useState<WorkStatus>(idleStatus);
   const firstName = tecnico?.nombre?.split(' ')[0] || 'Tecnico';
   const tecnicoId = tecnico?.id_tecnico ?? tecnico?.id ?? null;
+  const todayDateKey = formatDateKey(new Date());
+  const cachedAgenda = tecnicoId ? getMisVisitasAsignadasHoyCache(tecnicoId, todayDateKey) : null;
+  const [agendaToday, setAgendaToday] = useState<VisitaAsignada[]>(() => sortAgenda(cachedAgenda?.visitas ?? []));
+  const [loadingAgenda, setLoadingAgenda] = useState(!cachedAgenda);
+  const [startingRouteId, setStartingRouteId] = useState<number | null>(null);
+  const [startingVisitId, setStartingVisitId] = useState<number | null>(null);
+  const [cancellingProcess, setCancellingProcess] = useState(false);
+  const [workStatus, setWorkStatus] = useState<WorkStatus>(idleStatus);
 
   const syncTrackingStatus = useCallback(async (currentAgenda: readonly VisitaAsignada[]) => {
     await reconcileTrackingForAssignedAgendas(currentAgenda, tecnicoId);
@@ -65,69 +78,9 @@ export default function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       let mounted = true;
-
-      async function loadWorkStatus() {
-        const [visitaState, entregaState, equipoState, gestionarEquipoState] = await Promise.all([
-          loadVisitaState(),
-          loadEntregaState(),
-          loadEquipoState(),
-          loadGestionarEquipoState(),
-        ]);
-
-        if (!mounted) return;
-
-        if (visitaState.empresaId) {
-          setWorkStatus({
-            icon: 'clipboard-outline',
-            route: visitaState.solicitantes.length
-              ? '/visitas/formulario'
-              : visitaState.sucursalId
-                ? '/visitas/solicitantes'
-                : '/visitas/sucursal',
-            text: visitaState.empresaNombre || 'Continua la visita pendiente.',
-            title: 'Visita en curso',
-          });
-          return;
-        }
-
-        if (entregaState.empresa) {
-          const hasReceptor =
-            Boolean(entregaState.receptor) ||
-            Boolean(entregaState.receptorManual.nombre.trim() || entregaState.receptorManual.apellidos.trim());
-
-          setWorkStatus({
-            icon: 'cube-outline',
-            route: hasReceptor ? '/entregas/formulario' : '/entregas/receptor',
-            text: entregaState.empresa.nombre || 'Continua la entrega pendiente.',
-            title: 'Entrega en curso',
-          });
-          return;
-        }
-
-        if (equipoState.empresa) {
-          setWorkStatus({
-            icon: 'hardware-chip-outline',
-            route: equipoState.solicitante ? '/equipos/agregar/formulario' : '/equipos/agregar/solicitante',
-            text: equipoState.empresa.nombre || 'Continua el registro de equipo.',
-            title: 'Registro de equipo en curso',
-          });
-          return;
-        }
-
-        if (gestionarEquipoState.equipo) {
-          setWorkStatus({
-            icon: 'hardware-chip-outline',
-            route: '/equipos/gestionar/detalle',
-            text: gestionarEquipoState.equipo.serial || 'Continua la gestion del equipo.',
-            title: 'Gestion de equipo en curso',
-          });
-          return;
-        }
-
-        setWorkStatus(idleStatus);
-      }
-
-      loadWorkStatus();
+      void readWorkStatus().then((nextStatus) => {
+        if (mounted) setWorkStatus(nextStatus);
+      });
 
       return () => {
         mounted = false;
@@ -135,35 +88,96 @@ export default function DashboardScreen() {
     }, []),
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      let mounted = true;
+  const cancelCurrentProcess = useCallback(async (kind: WorkStatus['kind']) => {
+    try {
+      setCancellingProcess(true);
 
-      async function loadTodayAgenda() {
-        try {
-          setLoadingAgenda(true);
-          const response = await getMisVisitasAsignadasHoy();
-
-          if (!mounted) return;
-          const nextAgenda = [...(response.visitas ?? [])].sort((a, b) =>
-              `${a.horaInicio ?? a.horaProgramada ?? ''}`.localeCompare(`${b.horaInicio ?? b.horaProgramada ?? ''}`),
-          );
-          setAgendaToday(nextAgenda);
-          await syncTrackingStatus(nextAgenda);
-        } catch {
-          // Conserva la ultima respuesta valida mientras se recupera la conexion.
-        } finally {
-          if (mounted) setLoadingAgenda(false);
+      if (kind === 'VISITA_MANUAL') {
+        const visitaState = await loadVisitaState();
+        if (visitaState.origen === 'AGENDA' || visitaState.agendaId) {
+          throw new Error('La visita está vinculada a una agenda y no puede cancelarse desde Inicio.');
         }
+        if (visitaState.visitaId) await cancelarVisita(visitaState.visitaId);
+        await clearVisitaState();
+      } else if (kind === 'ENTREGA') {
+        await clearEntregaState();
+      } else if (kind === 'EQUIPO_NUEVO') {
+        await clearEquipoState();
+      } else if (kind === 'EQUIPO_GESTION') {
+        await clearGestionarEquipoState();
       }
 
-      loadTodayAgenda();
+      setWorkStatus(await readWorkStatus());
+      router.replace('/(tabs)');
+    } catch (error) {
+      Alert.alert(
+        'No se pudo cancelar',
+        error instanceof Error ? error.message : 'No se pudo eliminar el proceso pendiente.',
+      );
+    } finally {
+      setCancellingProcess(false);
+    }
+  }, []);
 
-      return () => {
-        mounted = false;
-      };
-    }, [syncTrackingStatus]),
-  );
+  const requestCancelCurrentProcess = useCallback(() => {
+    if (workStatus.kind === 'IDLE' || cancellingProcess) return;
+
+    if (workStatus.kind === 'VISITA_AGENDA') {
+      Alert.alert(
+        'Visita agendada activa',
+        'Esta visita debe completarse desde el formulario o cancelarse formalmente desde la agenda. El seguimiento de ubicación continuará activo.',
+      );
+      return;
+    }
+
+    Alert.alert(
+      `Cancelar ${getWorkStatusLabel(workStatus.kind)}`,
+      'Se eliminará el progreso pendiente de este proceso. Esta acción no se puede deshacer.',
+      [
+        { text: 'Conservar', style: 'cancel' },
+        {
+          text: 'Cancelar proceso',
+          style: 'destructive',
+          onPress: () => {
+            void cancelCurrentProcess(workStatus.kind);
+          },
+        },
+      ],
+    );
+  }, [cancelCurrentProcess, cancellingProcess, workStatus]);
+
+  const loadTodayAgenda = useCallback(async (force = false) => {
+    if (!tecnicoId) {
+      setLoadingAgenda(false);
+      return;
+    }
+
+    const cached = getMisVisitasAsignadasHoyCache(tecnicoId, todayDateKey);
+    if (!force && cached) {
+      const nextAgenda = sortAgenda(cached.visitas ?? []);
+      setAgendaToday(nextAgenda);
+      setLoadingAgenda(false);
+      await syncTrackingStatus(nextAgenda);
+      return;
+    }
+
+    try {
+      setLoadingAgenda(true);
+      const response = await getMisVisitasAsignadasHoyCached(tecnicoId, todayDateKey, force);
+      const nextAgenda = sortAgenda(response.visitas ?? []);
+      setAgendaToday(nextAgenda);
+      await syncTrackingStatus(nextAgenda);
+    } catch {
+      // Conserva la ultima respuesta valida mientras se recupera la conexion.
+    } finally {
+      setLoadingAgenda(false);
+    }
+  }, [syncTrackingStatus, tecnicoId, todayDateKey]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    void loadTodayAgenda(false);
+  }, [isLoading, loadTodayAgenda]);
 
   async function iniciarRuta(visita: VisitaAsignada) {
     if (startingRouteId) return;
@@ -187,6 +201,9 @@ export default function DashboardScreen() {
         item.agendaId === visita.agendaId ? response.visita : item,
       );
       setAgendaToday(nextAgenda);
+      if (tecnicoId) {
+        setMisVisitasAsignadasHoyCache(tecnicoId, todayDateKey, { fecha: todayDateKey, visitas: nextAgenda });
+      }
       await syncTrackingStatus(nextAgenda);
       mostrarOpcionesMapa(response.visita);
     } catch (error) {
@@ -216,6 +233,9 @@ export default function DashboardScreen() {
         item.agendaId === visita.agendaId ? response.visita : item,
       );
       setAgendaToday(nextAgenda);
+      if (tecnicoId) {
+        setMisVisitasAsignadasHoyCache(tecnicoId, todayDateKey, { fecha: todayDateKey, visitas: nextAgenda });
+      }
       try {
         await syncTrackingStatus(nextAgenda);
       } catch (error) {
@@ -303,29 +323,37 @@ export default function DashboardScreen() {
   }
 
   return (
-    <Screen>
+    <Screen onRefresh={() => loadTodayAgenda(true)} refreshing={loadingAgenda}>
       <RidsModuleBanner
         icon="home-outline"
         label="RESUMEN DE TU JORNADA"
         title={`Hola, ${firstName}`}
       />
 
-      <Pressable
+      <SwipeToCancelCard
+        disabled={workStatus.kind === 'IDLE' || cancellingProcess}
+        onCancelRequest={requestCancelCurrentProcess}
         onPress={() => router.push(workStatus.route)}
-        style={({ pressed }) => [styles.statusCard, pressed && styles.statusCardPressed]}>
-        <View style={styles.statusAccent} />
-        <View style={styles.statusCopy}>
-          <View style={styles.statusLabelRow}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusLabel}>Estado actual</Text>
+        style={styles.statusCardContainer}>
+        <View style={styles.statusCard}>
+          <View style={styles.statusAccent} />
+          <View style={styles.statusCopy}>
+            <View style={styles.statusLabelRow}>
+              <View style={styles.statusDot} />
+              <Text style={styles.statusLabel}>Estado actual</Text>
+            </View>
+            <Text style={styles.statusTitle}>{workStatus.title}</Text>
+            <Text style={styles.statusText}>{workStatus.text}</Text>
           </View>
-          <Text style={styles.statusTitle}>{workStatus.title}</Text>
-          <Text style={styles.statusText}>{workStatus.text}</Text>
+          <View style={styles.pulse}>
+            {cancellingProcess ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Ionicons color={colors.white} name={workStatus.icon} size={30} />
+            )}
+          </View>
         </View>
-        <View style={styles.pulse}>
-          <Ionicons color={colors.white} name={workStatus.icon} size={30} />
-        </View>
-      </Pressable>
+      </SwipeToCancelCard>
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Visitas programadas</Text>
@@ -401,14 +429,14 @@ function AgendaTodayCard({
       <View style={styles.agendaCopy}>
         <Text style={styles.agendaTitle}>{empresa}</Text>
         <View style={styles.agendaMetaRow}>
-          <Ionicons color={ridsPalette.slate} name="time-outline" size={14} />
+          <Ionicons color={ridsPalette.cyanDark} name="time-outline" size={14} />
           <Text style={styles.agendaText}>{hora || 'Sin horario'}</Text>
           <View style={styles.metaDivider} />
           <Text style={styles.agendaState}>{formatAgendaState(item.estado)}</Text>
         </View>
         {isStarted ? (
           <View style={styles.startedVisitBadge}>
-            <Ionicons color="#047857" name="checkmark-circle-outline" size={14} />
+            <Ionicons color={ridsPalette.cyanDark} name="checkmark-circle-outline" size={14} />
             <Text style={styles.startedVisitText}>Visita iniciada</Text>
           </View>
         ) : null}
@@ -470,6 +498,87 @@ function formatAgendaState(state: string) {
     .replace(/^./, (letter) => letter.toUpperCase());
 }
 
+async function readWorkStatus(): Promise<WorkStatus> {
+  const [visitaState, entregaState, equipoState, gestionarEquipoState] = await Promise.all([
+    loadVisitaState(),
+    loadEntregaState(),
+    loadEquipoState(),
+    loadGestionarEquipoState(),
+  ]);
+
+  if (visitaState.empresaId) {
+    const isAgendaVisit = visitaState.origen === 'AGENDA' || typeof visitaState.agendaId === 'number';
+    return {
+      icon: 'clipboard-outline',
+      kind: isAgendaVisit ? 'VISITA_AGENDA' : 'VISITA_MANUAL',
+      route: visitaState.solicitantes.length
+        ? '/visitas/formulario'
+        : visitaState.sucursalId
+          ? '/visitas/solicitantes'
+          : '/visitas/sucursal',
+      text: visitaState.empresaNombre || 'Continua la visita pendiente.',
+      title: isAgendaVisit ? 'Visita agendada en curso' : 'Visita en curso',
+    };
+  }
+
+  if (entregaState.empresa) {
+    const hasReceptor =
+      Boolean(entregaState.receptor) ||
+      Boolean(entregaState.receptorManual.nombre.trim() || entregaState.receptorManual.apellidos.trim());
+
+    return {
+      icon: 'cube-outline',
+      kind: 'ENTREGA',
+      route: hasReceptor ? '/entregas/formulario' : '/entregas/receptor',
+      text: entregaState.empresa.nombre || 'Continua la entrega pendiente.',
+      title: entregaState.operation === 'retiro' ? 'Retiro en curso' : 'Entrega en curso',
+    };
+  }
+
+  if (equipoState.empresa) {
+    return {
+      icon: 'hardware-chip-outline',
+      kind: 'EQUIPO_NUEVO',
+      route: equipoState.solicitante ? '/equipos/agregar/formulario' : '/equipos/agregar/solicitante',
+      text: equipoState.empresa.nombre || 'Continua el registro de equipo.',
+      title: 'Registro de equipo en curso',
+    };
+  }
+
+  if (gestionarEquipoState.equipo) {
+    return {
+      icon: 'hardware-chip-outline',
+      kind: 'EQUIPO_GESTION',
+      route: '/equipos/gestionar/detalle',
+      text: gestionarEquipoState.equipo.serial || 'Continua la gestion del equipo.',
+      title: 'Gestion de equipo en curso',
+    };
+  }
+
+  return idleStatus;
+}
+
+function getWorkStatusLabel(kind: WorkStatus['kind']) {
+  if (kind === 'VISITA_MANUAL') return 'visita';
+  if (kind === 'ENTREGA') return 'entrega o retiro';
+  if (kind === 'EQUIPO_NUEVO') return 'registro de equipo';
+  if (kind === 'EQUIPO_GESTION') return 'gestión de equipo';
+  return 'proceso';
+}
+
+function sortAgenda(visitas: readonly VisitaAsignada[]) {
+  return [...visitas].sort((a, b) =>
+    `${a.horaInicio ?? a.horaProgramada ?? ''}`.localeCompare(`${b.horaInicio ?? b.horaProgramada ?? ''}`),
+  );
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function getDestino(visita: VisitaAsignada) {
   if (typeof visita.latitud === 'number' && typeof visita.longitud === 'number') {
     return {
@@ -503,15 +612,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  statusCardContainer: {
+    marginBottom: 24,
+    ...shadow,
+  },
   statusCard: {
     backgroundColor: ridsPalette.cyanDark,
     borderRadius: 20,
     flexDirection: 'row',
     gap: 18,
-    marginBottom: 24,
     overflow: 'hidden',
     padding: 20,
-    ...shadow,
   },
   statusAccent: {
     backgroundColor: colors.brandDark,
@@ -520,9 +631,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     width: 4,
-  },
-  statusCardPressed: {
-    transform: [{ scale: 0.99 }],
   },
   statusCopy: {
     flex: 1,

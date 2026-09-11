@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
 
 import { colors } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 
 type AppButtonProps = {
   title: string;
@@ -36,7 +37,7 @@ export function AppButton({
         style,
       ]}>
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.white : colors.brand} />
+        <ActivityIndicator color={variant === 'primary' ? colors.white : ridsPalette.cyanDark} />
       ) : (
         <Text style={[styles.label, variant !== 'primary' && styles.altLabel, textStyle]}>{title}</Text>
       )}
@@ -52,10 +53,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primary: {
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
   },
   secondary: {
-    backgroundColor: colors.brandSoft,
+    backgroundColor: ridsPalette.cyanSoft,
   },
   ghost: {
     backgroundColor: 'transparent',
@@ -72,6 +73,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   altLabel: {
-    color: colors.brand,
+    color: ridsPalette.cyanDark,
   },
 });

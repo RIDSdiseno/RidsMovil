@@ -423,7 +423,7 @@ export default function FormularioVisitaScreen() {
           <Text style={styles.summaryTitle}>{visitaState.solicitantes.length} solicitante(s)</Text>
           <Text style={styles.summaryText}>{visitaState.solicitantes.map((s) => s.nombre).join(', ')}</Text>
         </View>
-        <Ionicons color="#B7C0CE" name="chevron-forward" size={18} />
+        <Ionicons color={ridsPalette.cyanDark} name="chevron-forward" size={18} />
       </Pressable>
 
       <Section title="Ubicacion">

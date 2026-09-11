@@ -167,7 +167,7 @@ export default function RetiroEquiposScreen() {
   }
 
   return (
-    <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
+    <Screen bottomNavigation={<BottomNavigation />} extendUnderNavigation scroll={false}>
       <RidsFlowHeader
         icon={entregaState.brand === 'econnet' ? 'cube-outline' : 'hardware-chip-outline'}
         label={`${entregaState.brand === 'econnet' ? 'ECONNET' : 'RIDS'} · RETIRO`}
@@ -225,7 +225,7 @@ export default function RetiroEquiposScreen() {
             <View style={styles.countBadge}><Text style={styles.countText}>{entregaState.retiroProductos.length}</Text></View>
           </View>
 
-          <ScrollView contentContainerStyle={styles.list} scrollIndicatorInsets={{ bottom: 150 }} style={styles.listScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={styles.list} scrollIndicatorInsets={{ bottom: 84 }} style={styles.listScroll} showsVerticalScrollIndicator={false}>
             {entregaState.retiroProductos.map((producto) => (
               <Pressable key={producto.id} onPress={() => removeProducto(producto.id)} style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
                 <View style={styles.icon}>
@@ -262,7 +262,7 @@ export default function RetiroEquiposScreen() {
             />
             {search ? (
               <Pressable hitSlop={10} onPress={() => setSearch('')}>
-                <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+                <Ionicons color={ridsPalette.cyanDark} name="close-circle" size={19} />
               </Pressable>
             ) : null}
           </View>
@@ -277,7 +277,7 @@ export default function RetiroEquiposScreen() {
             refreshControl={
               <RefreshControl colors={[colors.brand]} onRefresh={refreshScreen} refreshing={refreshing} tintColor={colors.brand} />
             }
-            scrollIndicatorInsets={{ bottom: 150 }}
+            scrollIndicatorInsets={{ bottom: 84 }}
             style={styles.listScroll}
             showsVerticalScrollIndicator={false}>
             {filteredEquipos.map((equipo) => {
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 8,
-    paddingBottom: 190,
+    paddingBottom: 110,
     paddingTop: 14,
   },
   listScroll: {

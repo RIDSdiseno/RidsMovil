@@ -14,12 +14,19 @@ import {
   View,
 } from 'react-native';
 
-import { getMisVisitasAsignadasHoy, iniciarRutaVisitaAsignada, iniciarVisitaAsignada } from '@/src/api/rids';
-import { AgendaVisita, getAgendaMensualCached } from '@/src/api/intranet';
+import {
+  getMisVisitasAsignadasHoyCache,
+  getMisVisitasAsignadasHoyCached,
+  iniciarRutaVisitaAsignada,
+  iniciarVisitaAsignada,
+  setMisVisitasAsignadasHoyCache,
+} from '@/src/api/rids';
+import { AgendaVisita, getAgendaMensualCache, getAgendaMensualCached } from '@/src/api/intranet';
 import { useAuth } from '@/src/auth/AuthContext';
 import { AppButton } from '@/src/components/AppButton';
 import { Screen } from '@/src/components/Screen';
 import { colors, shadow } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { VisitaAsignada } from '@/src/types/api';
 import { reconcileTrackingForAssignedAgendas } from '@/src/visitas/agenda-tracking-flow';
 import { reconcileDailyLocationTracking } from '@/src/visitas/daily-location-tracking';
@@ -29,16 +36,26 @@ import { formatDistanceMeters, getDistanceFromCurrentLocation } from '@/src/visi
 
 export default function AgendaScreen() {
   const { tecnico } = useAuth();
+  const tecnicoId = tecnico?.id_tecnico ?? tecnico?.id ?? null;
+  const initialDateKey = formatDateKey(new Date());
+  const initialDate = parseDateKey(initialDateKey);
+  const initialAgendaParams = {
+    year: initialDate.getFullYear(),
+    month: initialDate.getMonth() + 1,
+    tecnico: tecnico?.nombre,
+  };
+  const cachedVisitas = tecnicoId ? getMisVisitasAsignadasHoyCache(tecnicoId, initialDateKey) : null;
   const [fecha, setFecha] = useState('');
-  const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
-  const [agendaMensual, setAgendaMensual] = useState<AgendaVisita[]>([]);
-  const [visitas, setVisitas] = useState<VisitaAsignada[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(initialDateKey);
+  const [agendaMensual, setAgendaMensual] = useState<AgendaVisita[]>(() =>
+    getAgendaMensualCache(initialAgendaParams) ?? [],
+  );
+  const [visitas, setVisitas] = useState<VisitaAsignada[]>(cachedVisitas?.visitas ?? []);
+  const [loading, setLoading] = useState(!cachedVisitas);
   const [refreshing, setRefreshing] = useState(false);
   const [startingRouteId, setStartingRouteId] = useState<number | null>(null);
   const [startingVisitId, setStartingVisitId] = useState<number | null>(null);
   const selectedMonthKey = selectedDate.slice(0, 7);
-  const tecnicoId = tecnico?.id_tecnico ?? tecnico?.id ?? null;
 
   const syncTrackingStatus = useCallback(async (currentVisitas: readonly VisitaAsignada[]) => {
     await reconcileTrackingForAssignedAgendas(currentVisitas, tecnicoId);
@@ -66,10 +83,24 @@ export default function AgendaScreen() {
     }
   }, [selectedDate, tecnico?.nombre]);
 
-  const loadVisitas = useCallback(async (dateKey = selectedDate) => {
+  const loadVisitas = useCallback(async (dateKey = selectedDate, force = false) => {
+    if (!tecnicoId) {
+      setLoading(false);
+      return;
+    }
+
+    const cached = getMisVisitasAsignadasHoyCache(tecnicoId, dateKey);
+    if (!force && cached) {
+      setFecha(cached.fecha);
+      setVisitas(cached.visitas ?? []);
+      setLoading(false);
+      await syncTrackingStatus(cached.visitas ?? []);
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await getMisVisitasAsignadasHoy(dateKey);
+      const response = await getMisVisitasAsignadasHoyCached(tecnicoId, dateKey, force);
       const nextVisitas = response.visitas ?? [];
       setFecha(response.fecha);
       setVisitas(nextVisitas);
@@ -79,7 +110,7 @@ export default function AgendaScreen() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, syncTrackingStatus]);
+  }, [selectedDate, syncTrackingStatus, tecnicoId]);
 
   useEffect(() => {
     loadAgendaMes();
@@ -96,7 +127,7 @@ export default function AgendaScreen() {
   async function refreshScreen() {
     try {
       setRefreshing(true);
-      await Promise.all([loadAgendaMes(true), loadVisitas(selectedDate)]);
+      await Promise.all([loadAgendaMes(true), loadVisitas(selectedDate, true)]);
     } finally {
       setRefreshing(false);
     }
@@ -124,6 +155,9 @@ export default function AgendaScreen() {
         item.agendaId === visita.agendaId ? response.visita : item,
       );
       setVisitas(nextVisitas);
+      if (tecnicoId) {
+        setMisVisitasAsignadasHoyCache(tecnicoId, selectedDate, { fecha: selectedDate, visitas: nextVisitas });
+      }
       await syncTrackingStatus(nextVisitas);
       mostrarOpcionesMapa(response.visita);
     } catch (error) {
@@ -153,6 +187,9 @@ export default function AgendaScreen() {
         item.agendaId === visita.agendaId ? response.visita : item,
       );
       setVisitas(nextVisitas);
+      if (tecnicoId) {
+        setMisVisitasAsignadasHoyCache(tecnicoId, selectedDate, { fecha: selectedDate, visitas: nextVisitas });
+      }
       try {
         await syncTrackingStatus(nextVisitas);
       } catch (error) {
@@ -292,7 +329,7 @@ export default function AgendaScreen() {
 
       {!loading && !selectedDateIsPast && visitas.length === 0 && selectedAgendaItems.length > 0 ? (
         <View style={styles.noticeCard}>
-          <Ionicons color={colors.warning} name="information-circle-outline" size={20} />
+          <Ionicons color={ridsPalette.cyanDark} name="information-circle-outline" size={20} />
           <Text style={styles.noticeText}>
             Hay visitas en la agenda interna para este dia, pero no hay una visita asignada disponible para iniciar ruta desde la app.
           </Text>
@@ -369,19 +406,19 @@ function AgendaCard({
 
       {isStarted ? (
         <View style={styles.startedVisitBadge}>
-          <Ionicons color="#047857" name="checkmark-circle-outline" size={16} />
+          <Ionicons color={ridsPalette.cyanDark} name="checkmark-circle-outline" size={16} />
           <Text style={styles.startedVisitText}>Visita iniciada</Text>
         </View>
       ) : null}
 
       <View style={styles.infoRow}>
-        <Ionicons color={colors.muted} name="location-outline" size={18} />
+        <Ionicons color={ridsPalette.cyanDark} name="location-outline" size={18} />
         <Text style={styles.infoText}>{direccion}</Text>
       </View>
 
       {!isPastVisit && item.observacion ? (
         <View style={styles.infoRow}>
-          <Ionicons color={colors.muted} name="document-text-outline" size={18} />
+          <Ionicons color={ridsPalette.cyanDark} name="document-text-outline" size={18} />
           <Text style={styles.infoText}>{item.observacion}</Text>
         </View>
       ) : null}
@@ -543,7 +580,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   dayButtonSelected: {
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
   },
   dayButtonPressed: {
     transform: [{ scale: 0.97 }],

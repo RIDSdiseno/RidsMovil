@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { router, usePathname } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   LayoutChangeEvent,
+  PanResponder,
   Platform,
   Pressable,
   StyleSheet,
@@ -20,8 +21,8 @@ import { ridsPalette } from '@/src/theme/rids-palette';
    CONFIGURACIÓN
 ========================================================= */
 
-const ROW_HEIGHT = 60;
-const INNER_PADDING = 5;
+const ROW_HEIGHT = 68;
+const INNER_PADDING = 6;
 const INDICATOR_GAP = 2;
 
 const indicatorSpring = {
@@ -107,11 +108,11 @@ export function BottomNavigation() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
-  const bottomInset = Math.max(
-    insets.bottom,
+  const bottomOffset = Math.max(
+    insets.bottom + 8,
     Platform.OS === 'android'
-      ? 12
-      : 0,
+      ? 20
+      : 18,
   );
 
   const [barWidth, setBarWidth] =
@@ -133,11 +134,115 @@ export function BottomNavigation() {
   const activeIndex =
     getActiveIndex(pathname);
 
+  const dragStartX =
+    useRef(0);
+
+  const dragIndex =
+    useRef(activeIndex);
+
+  const [draggingIndex, setDraggingIndex] =
+    useState<number | null>(null);
+
   const tabWidth =
     getTabWidth(
       barWidth,
       items.length,
     );
+
+  const visualIndex =
+    draggingIndex ??
+    activeIndex;
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          tabWidth > 0 &&
+          Math.abs(gesture.dx) > 8 &&
+          Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.2,
+        onMoveShouldSetPanResponderCapture: (_, gesture) =>
+          tabWidth > 0 &&
+          Math.abs(gesture.dx) > 8 &&
+          Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.2,
+        onPanResponderGrant: () => {
+          if (activeIndex < 0) return;
+
+          indicatorX.stopAnimation();
+          indicatorStretch.stopAnimation();
+          dragStartX.current = getIndicatorX(barWidth, activeIndex, items.length);
+          dragIndex.current = activeIndex;
+          setDraggingIndex(activeIndex);
+
+          Animated.spring(indicatorStretch, {
+            damping: 18,
+            mass: 0.55,
+            stiffness: 240,
+            toValue: 1.08,
+            useNativeDriver: true,
+          }).start();
+        },
+        onPanResponderMove: (_, gesture) => {
+          if (activeIndex < 0) return;
+
+          const firstX = getIndicatorX(barWidth, 0, items.length);
+          const lastX = getIndicatorX(barWidth, items.length - 1, items.length);
+          const nextX = clamp(dragStartX.current + gesture.dx, firstX, lastX);
+          const nextIndex = clamp(Math.round((nextX - firstX) / tabWidth), 0, items.length - 1);
+
+          indicatorX.setValue(nextX);
+
+          if (nextIndex !== dragIndex.current) {
+            dragIndex.current = nextIndex;
+            setDraggingIndex(nextIndex);
+            void Haptics.selectionAsync().catch(() => undefined);
+          }
+        },
+        onPanResponderRelease: () => {
+          if (activeIndex < 0) return;
+
+          const nextIndex = dragIndex.current;
+
+          Animated.spring(indicatorX, {
+            ...indicatorSpring,
+            toValue: getIndicatorX(barWidth, nextIndex, items.length),
+            useNativeDriver: true,
+          }).start();
+          Animated.spring(indicatorStretch, {
+            damping: 15,
+            mass: 0.6,
+            stiffness: 220,
+            toValue: 1,
+            useNativeDriver: true,
+          }).start();
+
+          setDraggingIndex(null);
+
+          if (nextIndex !== activeIndex) {
+            router.replace(items[nextIndex].route);
+          }
+        },
+        onPanResponderTerminate: () => {
+          if (activeIndex < 0) return;
+
+          setDraggingIndex(null);
+          Animated.parallel([
+            Animated.spring(indicatorX, {
+              ...indicatorSpring,
+              toValue: getIndicatorX(barWidth, activeIndex, items.length),
+              useNativeDriver: true,
+            }),
+            Animated.spring(indicatorStretch, {
+              damping: 15,
+              mass: 0.6,
+              stiffness: 220,
+              toValue: 1,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        },
+      }),
+    [activeIndex, barWidth, indicatorStretch, indicatorX, tabWidth],
+  );
 
   /* =======================================================
      MEDICIÓN INICIAL
@@ -236,13 +341,13 @@ export function BottomNavigation() {
 
   return (
     <View
+      {...panResponder.panHandlers}
       onLayout={handleLayout}
       style={[
         styles.shell,
         {
-          height:
-            ROW_HEIGHT +
-            bottomInset,
+          bottom:
+            bottomOffset,
         },
       ]}
     >
@@ -257,7 +362,7 @@ export function BottomNavigation() {
             ? 'dimezisBlurView'
             : 'none'
         }
-        intensity={72}
+        intensity={58}
         pointerEvents="none"
         style={
           StyleSheet.absoluteFill
@@ -272,17 +377,6 @@ export function BottomNavigation() {
       <View
         pointerEvents="none"
         style={styles.glassTint}
-      />
-
-      {/* ===============================================
-          REFLEJO SUPERIOR
-      =============================================== */}
-
-      <View
-        pointerEvents="none"
-        style={
-          styles.glassHighlight
-        }
       />
 
       {/* ===============================================
@@ -345,7 +439,7 @@ export function BottomNavigation() {
           (item, index) => {
             const focused =
               index ===
-              activeIndex;
+              visualIndex;
 
             return (
               <LiquidGlassNavigationItem
@@ -432,15 +526,6 @@ function LiquidGlassNavigationItem({
   ]);
 
   const iconStyle = {
-    opacity:
-      focusProgress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [
-          0.72,
-          1,
-        ],
-      }),
-
     transform: [
       {
         scale:
@@ -462,9 +547,7 @@ function LiquidGlassNavigationItem({
   };
 
   const color =
-    focused
-      ? ridsPalette.cyanDark
-      : '#536171';
+    ridsPalette.cyanDark;
 
   return (
     <Pressable
@@ -496,7 +579,7 @@ function LiquidGlassNavigationItem({
               ? activeIcon
               : icon
           }
-          size={24}
+          size={27}
         />
       </Animated.View>
     </Pressable>
@@ -564,6 +647,17 @@ function getIndicatorX(
   );
 }
 
+function clamp(
+  value: number,
+  minimum: number,
+  maximum: number,
+) {
+  return Math.min(
+    Math.max(value, minimum),
+    maximum,
+  );
+}
+
 /* =========================================================
    ESTILOS
 ========================================================= */
@@ -572,18 +666,18 @@ const styles =
   StyleSheet.create({
     shell: {
       backgroundColor:
-        'rgba(238, 248, 250, 0.58)',
+        'transparent',
 
       borderColor:
-        'rgba(255, 255, 255, 0.82)',
+        'rgba(255, 255, 255, 0.94)',
 
-      borderRadius: 28,
+      borderRadius: 26,
 
       borderWidth: 1,
 
-      bottom: 8,
-
       elevation: 12,
+
+      height: ROW_HEIGHT,
 
       left: 10,
 
@@ -601,46 +695,30 @@ const styles =
         height: 10,
       },
 
-      shadowOpacity: 0.2,
+      shadowOpacity: 0.18,
 
-      shadowRadius: 22,
+      shadowRadius: 20,
     },
 
     glassTint: {
       ...StyleSheet.absoluteFillObject,
 
       backgroundColor:
-        'rgba(221, 247, 248, 0.2)',
-    },
-
-    glassHighlight: {
-      backgroundColor:
-        'rgba(255, 255, 255, 0.9)',
-
-      height: 1,
-
-      left: 18,
-
-      position:
-        'absolute',
-
-      right: 18,
-
-      top: 1,
+        'rgba(221, 247, 248, 0.08)',
     },
 
     activeIndicator: {
       backgroundColor:
-        'rgba(255, 255, 255, 0.42)',
+        'rgba(255, 255, 255, 0.5)',
 
       borderColor:
-        'rgba(255, 255, 255, 0.7)',
+        'rgba(255, 255, 255, 0.92)',
 
-      borderRadius: 24,
+      borderRadius: 20,
 
       borderWidth: 1,
 
-      height: 50,
+      height: 58,
 
       left: 0,
 
@@ -657,9 +735,9 @@ const styles =
         height: 3,
       },
 
-      shadowOpacity: 0.13,
+      shadowOpacity: 0.18,
 
-      shadowRadius: 9,
+      shadowRadius: 10,
 
       top: 5,
     },
@@ -668,7 +746,7 @@ const styles =
       ...StyleSheet.absoluteFillObject,
 
       backgroundColor:
-        'rgba(45, 185, 200, 0.13)',
+        'rgba(45, 185, 200, 0.18)',
     },
 
     itemsRow: {
@@ -689,6 +767,8 @@ const styles =
         'center',
 
       minWidth: 0,
+
+      paddingHorizontal: 2,
     },
 
     itemPressed: {

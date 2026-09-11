@@ -165,7 +165,7 @@ export default function EntregaReceptorScreen() {
   const brandName = entregaState.brand === 'econnet' ? 'ECONNET' : 'RIDS';
 
   return (
-    <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
+    <Screen bottomNavigation={<BottomNavigation />} extendUnderNavigation scroll={false}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={24}
@@ -196,7 +196,7 @@ export default function EntregaReceptorScreen() {
           <ScrollView
             contentContainerStyle={styles.manualScroll}
             keyboardShouldPersistTaps="handled"
-            scrollIndicatorInsets={{ bottom: 190 }}
+            scrollIndicatorInsets={{ bottom: 84 }}
             showsVerticalScrollIndicator={false}>
             <View style={styles.manualForm}>
               <TextInput
@@ -256,7 +256,7 @@ export default function EntregaReceptorScreen() {
               />
               {search ? (
                 <Pressable hitSlop={10} onPress={() => setSearch('')}>
-                  <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+                  <Ionicons color={ridsPalette.cyanDark} name="close-circle" size={19} />
                 </Pressable>
               ) : null}
             </View>
@@ -273,7 +273,7 @@ export default function EntregaReceptorScreen() {
             refreshControl={
               <RefreshControl colors={[colors.brand]} onRefresh={refreshScreen} refreshing={refreshing} tintColor={colors.brand} />
             }
-            scrollIndicatorInsets={{ bottom: 150 }}
+            scrollIndicatorInsets={{ bottom: 84 }}
             style={styles.listScroll}
             showsVerticalScrollIndicator={false}>
             {filteredSolicitantes.length === 0 ? (
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   manualScroll: {
-    paddingBottom: 210,
+    paddingBottom: 110,
   },
   input: {
     backgroundColor: colors.surface,
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 8,
-    paddingBottom: 190,
+    paddingBottom: 110,
     paddingTop: 14,
   },
   listScroll: {

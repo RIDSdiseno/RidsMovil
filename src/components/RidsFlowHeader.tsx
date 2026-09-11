@@ -18,7 +18,7 @@ export function RidsFlowHeader({
   return (
     <View style={styles.header}>
       <View style={styles.icon}>
-        <Ionicons color={ridsPalette.charcoal} name={icon} size={24} />
+        <Ionicons color={ridsPalette.cyanDark} name={icon} size={24} />
       </View>
       <View style={styles.copy}>
         <Text style={styles.label}>{label}</Text>

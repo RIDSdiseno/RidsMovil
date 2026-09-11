@@ -201,8 +201,7 @@ function iconoEvento(evento: TrackingEvent): keyof typeof Ionicons.glyphMap {
 
 function colorEvento(evento: TrackingEvent) {
   if (evento.evento === 'start-error' || evento.evento === 'permiso') return '#c0392b';
-  if (evento.evento === 'start') return colors.brand;
-  return colors.muted;
+  return colors.brand;
 }
 
 const styles = StyleSheet.create({

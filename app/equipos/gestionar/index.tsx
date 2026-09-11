@@ -127,7 +127,7 @@ export default function GestionarEquipoScreen() {
   }
 
   return (
-    <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
+    <Screen bottomNavigation={<BottomNavigation />} extendUnderNavigation scroll={false}>
       <RidsFlowHeader
         icon="construct-outline"
         label="INVENTARIO TÉCNICO"
@@ -154,7 +154,7 @@ export default function GestionarEquipoScreen() {
               <Text numberOfLines={1} style={styles.pickerButtonText}>
                 {empresaId ? (clientes.find((c) => c.id_empresa === empresaId)?.nombre ?? 'Empresa') : 'Todas'}
               </Text>
-              <Ionicons color="#98A2B3" name="chevron-down" size={15} />
+              <Ionicons color={ridsPalette.cyanDark} name="chevron-down" size={15} />
             </Pressable>
           </View>
 
@@ -164,7 +164,7 @@ export default function GestionarEquipoScreen() {
               <Text numberOfLines={1} style={styles.pickerButtonText}>
                 {estadoFiltro ? labelDeEstadoEquipo(estadoFiltro) : 'Todos'}
               </Text>
-              <Ionicons color="#98A2B3" name="chevron-down" size={15} />
+              <Ionicons color={ridsPalette.cyanDark} name="chevron-down" size={15} />
             </Pressable>
           </View>
         </View>
@@ -238,7 +238,7 @@ export default function GestionarEquipoScreen() {
                 {[equipo.marca, equipo.modelo].filter(Boolean).join(' · ') || 'Marca y modelo por completar'}
               </Text>
               <View style={styles.assigneeRow}>
-                <Ionicons color={ridsPalette.slate} name="person-outline" size={12} />
+                <Ionicons color={ridsPalette.cyanDark} name="person-outline" size={12} />
                 <Text style={styles.assigneeText}>{equipo.nombreSolicitante || 'Sin solicitante asignado'}</Text>
               </View>
               {equipo.tieneAgente || equipo.tieneMantencion || equipo.tieneOneDrive ? (
@@ -265,10 +265,10 @@ export default function GestionarEquipoScreen() {
                 </View>
               ) : null}
             </View>
-            <Ionicons color="#B7C0CE" name="chevron-forward" size={17} />
+            <Ionicons color={ridsPalette.cyanDark} name="chevron-forward" size={17} />
           </Pressable>
         )}
-        scrollIndicatorInsets={{ bottom: 150 }}
+        scrollIndicatorInsets={{ bottom: 84 }}
         style={styles.listScroll}
         showsVerticalScrollIndicator={false}
       />
@@ -325,7 +325,7 @@ export default function GestionarEquipoScreen() {
                     }}
                     style={styles.modalOption}>
                     <Text style={[styles.modalOptionText, activo && styles.modalOptionTextActive]}>{item.label}</Text>
-                    {activo ? <Ionicons color={colors.brand} name="checkmark" size={18} /> : null}
+                    {activo ? <Ionicons color={ridsPalette.cyanDark} name="checkmark" size={18} /> : null}
                   </Pressable>
                 );
               }}
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modalOptionTextActive: {
-    color: colors.brand,
+    color: ridsPalette.cyanDark,
     fontWeight: '800',
   },
   toggleFechas: {
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 8,
-    paddingBottom: 190,
+    paddingBottom: 110,
     paddingTop: 10,
   },
   listScroll: {

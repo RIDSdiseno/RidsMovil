@@ -16,7 +16,7 @@ export function RidsModuleBanner({
   return (
     <View style={styles.banner}>
       <View style={styles.icon}>
-        <Ionicons color={ridsPalette.charcoal} name={icon} size={28} />
+        <Ionicons color={ridsPalette.cyanDark} name={icon} size={28} />
       </View>
       <View style={styles.copy}>
         <Text style={styles.label}>{label}</Text>

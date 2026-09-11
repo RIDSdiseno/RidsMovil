@@ -76,7 +76,7 @@ export default function PerfilScreen() {
           <View style={styles.identityText}>
             <Text numberOfLines={2} style={styles.name}>{tecnico?.nombre || 'Técnico RIDS'}</Text>
             <View style={styles.roleRow}>
-              <Ionicons color={ridsPalette.cyan} name="shield-checkmark" size={15} />
+              <Ionicons color={ridsPalette.cyanDark} name="shield-checkmark" size={15} />
               <Text style={styles.role}>{role}</Text>
             </View>
           </View>
@@ -85,7 +85,7 @@ export default function PerfilScreen() {
         <View style={styles.divider} />
         <View style={styles.accountRow}>
           <View style={styles.accountIcon}>
-            <Ionicons color={ridsPalette.cyan} name="mail-outline" size={18} />
+            <Ionicons color={ridsPalette.cyanDark} name="mail-outline" size={18} />
           </View>
           <View style={styles.accountText}>
             <Text style={styles.accountLabel}>CORREO</Text>
@@ -94,7 +94,7 @@ export default function PerfilScreen() {
         </View>
         {technicianId ? (
           <View style={styles.technicianId}>
-            <Ionicons color={ridsPalette.slate} name="id-card-outline" size={16} />
+            <Ionicons color={ridsPalette.cyanDark} name="id-card-outline" size={16} />
             <Text style={styles.technicianIdText}>Técnico #{technicianId}</Text>
           </View>
         ) : null}
@@ -116,22 +116,22 @@ export default function PerfilScreen() {
           title="Mi agenda"
         />
         <HistoryButton
-          backgroundColor={ridsPalette.blueSoft}
-          color={ridsPalette.blue}
+          backgroundColor={ridsPalette.cyanSoft}
+          color={ridsPalette.cyanDark}
           icon="clipboard-outline"
           onPress={() => router.push('/perfil/historial-visitas')}
           title="Historial de visitas"
         />
         <HistoryButton
-          backgroundColor={ridsPalette.graySoft}
-          color={ridsPalette.charcoal}
+          backgroundColor={ridsPalette.cyanSoft}
+          color={ridsPalette.cyanDark}
           icon="cube-outline"
           onPress={() => router.push('/perfil/historial-entregas')}
           title="Historial de entregas"
         />
         <HistoryButton
-          backgroundColor={ridsPalette.greenSoft}
-          color={ridsPalette.green}
+          backgroundColor={ridsPalette.cyanSoft}
+          color={ridsPalette.cyanDark}
           icon="pulse-outline"
           onPress={() => router.push('/perfil/diagnostico')}
           title="Diagnóstico de ubicación"
@@ -177,7 +177,7 @@ function HistoryButton({
       </View>
       <Text style={styles.historyTitle}>{title}</Text>
       <View style={styles.chevron}>
-        <Ionicons color={ridsPalette.slate} name="chevron-forward" size={18} />
+        <Ionicons color={ridsPalette.cyanDark} name="chevron-forward" size={18} />
       </View>
     </Pressable>
   );

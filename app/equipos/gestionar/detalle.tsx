@@ -586,7 +586,7 @@ export default function GestionarEquipoDetalleScreen() {
           <Text style={styles.summaryTitle}>{[equipo.marca, equipo.modelo].filter(Boolean).join(' ') || 'Equipo'}</Text>
           <Text style={styles.summaryText}>Asignado a {solicitanteActual}</Text>
         </View>
-        <Ionicons color="#B7C0CE" name="chevron-forward" size={18} />
+        <Ionicons color={ridsPalette.cyanDark} name="chevron-forward" size={18} />
       </Pressable>
 
       {(
@@ -659,7 +659,7 @@ export default function GestionarEquipoDetalleScreen() {
           <Text style={styles.pickerButtonText}>
             {TIPO_EQUIPO_OPTIONS.find((o) => o.value === form.tipo)?.label ?? 'Selecciona tipo'}
           </Text>
-          <Ionicons color="#98A2B3" name="chevron-down" size={18} />
+          <Ionicons color={ridsPalette.cyanDark} name="chevron-down" size={18} />
         </Pressable>
 
         <Text style={styles.fieldLabel}>Estado del equipo</Text>
@@ -667,7 +667,7 @@ export default function GestionarEquipoDetalleScreen() {
           <Text style={styles.pickerButtonText}>
             {ESTADO_EQUIPO_OPTIONS.find((o) => o.value === form.estado)?.label ?? 'Selecciona estado'}
           </Text>
-          <Ionicons color="#98A2B3" name="chevron-down" size={18} />
+          <Ionicons color={ridsPalette.cyanDark} name="chevron-down" size={18} />
         </Pressable>
 
         <Field
@@ -911,7 +911,7 @@ export default function GestionarEquipoDetalleScreen() {
             </View>
 
             <Ionicons
-              color={colors.muted}
+              color={ridsPalette.cyanDark}
               name={softwareExpanded ? 'chevron-up' : 'chevron-down'}
               size={20}
             />

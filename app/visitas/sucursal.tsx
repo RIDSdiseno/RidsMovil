@@ -8,6 +8,7 @@ import { AppButton } from '@/src/components/AppButton';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { Screen } from '@/src/components/Screen';
 import { colors, shadow } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { Sucursal } from '@/src/types/api';
 import { loadVisitaState, saveVisitaState, VisitaEnCursoState } from '@/src/visitas/visita-state';
 import { getSucursalId } from '@/src/visitas/visita-utils';
@@ -78,7 +79,7 @@ export default function SucursalScreen() {
     return (
       <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
         <View style={styles.center}>
-          <ActivityIndicator color={colors.brand} />
+          <ActivityIndicator color={ridsPalette.cyanDark} />
         </View>
       </Screen>
     );
@@ -104,7 +105,7 @@ export default function SucursalScreen() {
                 pressed && styles.cardPressed,
               ]}>
               <View style={styles.icon}>
-                <Ionicons color={colors.brand} name="storefront-outline" size={24} />
+                <Ionicons color={ridsPalette.cyanDark} name="storefront-outline" size={24} />
               </View>
               <View style={styles.copy}>
                 <Text style={styles.cardTitle}>{sucursal.nombre}</Text>
@@ -161,15 +162,15 @@ const styles = StyleSheet.create({
     ...shadow,
   },
   cardSelected: {
-    backgroundColor: colors.brandSoft,
-    borderColor: colors.brand,
+    backgroundColor: ridsPalette.cyanSoft,
+    borderColor: ridsPalette.cyanDark,
   },
   cardPressed: {
     transform: [{ scale: 0.99 }],
   },
   icon: {
     alignItems: 'center',
-    backgroundColor: colors.brandSoft,
+    backgroundColor: ridsPalette.cyanSoft,
     borderRadius: 12,
     height: 38,
     justifyContent: 'center',
@@ -191,7 +192,7 @@ const styles = StyleSheet.create({
   },
   check: {
     alignItems: 'center',
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
     borderRadius: 13,
     height: 24,
     justifyContent: 'center',

@@ -1,16 +1,24 @@
 import type { BottomTabBarProps, BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  LayoutChangeEvent,
+  PanResponder,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/src/theme/colors';
 import { ridsPalette } from '@/src/theme/rids-palette';
 
-const ROW_HEIGHT = 60;
-const INNER_PADDING = 5;
-const INDICATOR_GAP = 3;
+const ROW_HEIGHT = 68;
+const INNER_PADDING = 6;
+const INDICATOR_GAP = 2;
 
 const indicatorSpring = {
   damping: 19,
@@ -20,12 +28,103 @@ const indicatorSpring = {
 
 export function RidsAnimatedTabBar({ descriptors, navigation, state }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 0);
+  const bottomOffset = Math.max(insets.bottom + 8, Platform.OS === 'android' ? 20 : 18);
   const [barWidth, setBarWidth] = useState(0);
   const indicatorX = useRef(new Animated.Value(0)).current;
   const indicatorStretch = useRef(new Animated.Value(1)).current;
   const hasMeasured = useRef(false);
+  const dragStartX = useRef(0);
+  const dragIndex = useRef(state.index);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const tabWidth = getTabWidth(barWidth, state.routes.length);
+  const visualIndex = draggingIndex ?? state.index;
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          tabWidth > 0 && Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.2,
+        onMoveShouldSetPanResponderCapture: (_, gesture) =>
+          tabWidth > 0 && Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.2,
+        onPanResponderGrant: () => {
+          indicatorX.stopAnimation();
+          indicatorStretch.stopAnimation();
+          dragStartX.current = getIndicatorX(barWidth, state.index, state.routes.length);
+          dragIndex.current = state.index;
+          setDraggingIndex(state.index);
+          Animated.spring(indicatorStretch, {
+            damping: 18,
+            mass: 0.55,
+            stiffness: 240,
+            toValue: 1.08,
+            useNativeDriver: true,
+          }).start();
+        },
+        onPanResponderMove: (_, gesture) => {
+          const firstX = getIndicatorX(barWidth, 0, state.routes.length);
+          const lastX = getIndicatorX(barWidth, state.routes.length - 1, state.routes.length);
+          const nextX = clamp(dragStartX.current + gesture.dx, firstX, lastX);
+          const nextIndex = clamp(Math.round((nextX - firstX) / tabWidth), 0, state.routes.length - 1);
+
+          indicatorX.setValue(nextX);
+
+          if (nextIndex !== dragIndex.current) {
+            dragIndex.current = nextIndex;
+            setDraggingIndex(nextIndex);
+            void Haptics.selectionAsync().catch(() => undefined);
+          }
+        },
+        onPanResponderRelease: () => {
+          const nextIndex = dragIndex.current;
+
+          Animated.spring(indicatorX, {
+            ...indicatorSpring,
+            toValue: getIndicatorX(barWidth, nextIndex, state.routes.length),
+            useNativeDriver: true,
+          }).start();
+          Animated.spring(indicatorStretch, {
+            damping: 15,
+            mass: 0.6,
+            stiffness: 220,
+            toValue: 1,
+            useNativeDriver: true,
+          }).start();
+
+          setDraggingIndex(null);
+
+          if (nextIndex === state.index) return;
+
+          const route = state.routes[nextIndex];
+          const event = navigation.emit({
+            canPreventDefault: true,
+            target: route.key,
+            type: 'tabPress',
+          });
+
+          if (!event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
+        },
+        onPanResponderTerminate: () => {
+          setDraggingIndex(null);
+          Animated.parallel([
+            Animated.spring(indicatorX, {
+              ...indicatorSpring,
+              toValue: getIndicatorX(barWidth, state.index, state.routes.length),
+              useNativeDriver: true,
+            }),
+            Animated.spring(indicatorStretch, {
+              damping: 15,
+              mass: 0.6,
+              stiffness: 220,
+              toValue: 1,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        },
+      }),
+    [barWidth, indicatorStretch, indicatorX, navigation, state.index, state.routes, tabWidth],
+  );
 
   function handleLayout(event: LayoutChangeEvent) {
     const width = event.nativeEvent.layout.width;
@@ -68,18 +167,18 @@ export function RidsAnimatedTabBar({ descriptors, navigation, state }: BottomTab
 
   return (
     <View
+      {...panResponder.panHandlers}
       onLayout={handleLayout}
-      style={[styles.shell, { height: ROW_HEIGHT + bottomInset }]}>
+      style={[styles.shell, { bottom: bottomOffset }]}>
       <BlurView
         blurReductionFactor={3}
         experimentalBlurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : 'none'}
-        intensity={72}
+        intensity={58}
         pointerEvents="none"
         style={StyleSheet.absoluteFill}
         tint="systemThinMaterialLight"
       />
       <View pointerEvents="none" style={styles.glassTint} />
-      <View pointerEvents="none" style={styles.glassHighlight} />
 
       {tabWidth > 0 ? (
         <Animated.View
@@ -108,7 +207,7 @@ export function RidsAnimatedTabBar({ descriptors, navigation, state }: BottomTab
       <View style={styles.itemsRow}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
-          const focused = state.index === index;
+          const focused = visualIndex === index;
           const label = getTabLabel(options, route.name);
 
           const onPress = () => {
@@ -176,13 +275,12 @@ function LiquidGlassTabItem({
   }, [focusProgress, focused]);
 
   const iconStyle = {
-    opacity: focusProgress.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] }),
     transform: [
       { scale: focusProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 1.13] }) },
     ],
   };
 
-  const color = focused ? ridsPalette.cyanDark : '#536171';
+  const color = ridsPalette.cyanDark;
 
   return (
     <Pressable
@@ -217,53 +315,49 @@ function getIndicatorX(width: number, index: number, routeCount: number) {
   return INNER_PADDING + tabWidth * index + INDICATOR_GAP;
 }
 
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(Math.max(value, minimum), maximum);
+}
+
 const styles = StyleSheet.create({
   shell: {
-    backgroundColor: 'rgba(238, 248, 250, 0.58)',
-    borderColor: 'rgba(255, 255, 255, 0.82)',
-    borderRadius: 28,
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(255, 255, 255, 0.94)',
+    borderRadius: 26,
     borderWidth: 1,
-    bottom: 8,
     elevation: 12,
+    height: ROW_HEIGHT,
     left: 10,
     overflow: 'hidden',
     position: 'absolute',
     right: 10,
     shadowColor: colors.brandDark,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 22,
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
   },
   glassTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(221, 247, 248, 0.2)',
-  },
-  glassHighlight: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    height: 1,
-    left: 18,
-    position: 'absolute',
-    right: 18,
-    top: 1,
+    backgroundColor: 'rgba(221, 247, 248, 0.08)',
   },
   activeIndicator: {
-    backgroundColor: 'rgba(255, 255, 255, 0.42)',
-    borderColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: 'rgba(255, 255, 255, 0.92)',
+    borderRadius: 20,
     borderWidth: 1,
-    height: 50,
+    height: 58,
     left: 0,
     overflow: 'hidden',
     position: 'absolute',
     shadowColor: ridsPalette.cyanDark,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.13,
-    shadowRadius: 9,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
     top: 5,
   },
   indicatorTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(45, 185, 200, 0.13)',
+    backgroundColor: 'rgba(45, 185, 200, 0.18)',
   },
   itemsRow: {
     flexDirection: 'row',
@@ -274,6 +368,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
+    minWidth: 0,
+    paddingHorizontal: 2,
   },
   itemPressed: {
     opacity: 0.58,

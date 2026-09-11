@@ -19,6 +19,7 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { AppButton } from "@/src/components/AppButton";
 import { TextInput } from "@/src/components/AppTextInput";
 import { colors, shadow } from "@/src/theme/colors";
+import { ridsPalette } from "@/src/theme/rids-palette";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -262,7 +263,7 @@ export default function LoginScreen() {
                 style={styles.eyeButton}
               >
                 <Ionicons
-                  color="#55505C"
+                  color={ridsPalette.cyanDark}
                   name={showPassword ? "eye-off" : "eye"}
                   size={28}
                 />
@@ -424,7 +425,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   button: {
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
     borderRadius: 16,
     marginTop: 10,
   },

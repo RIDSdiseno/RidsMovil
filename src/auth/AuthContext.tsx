@@ -3,6 +3,7 @@ import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRe
 import { Alert, AppState } from 'react-native';
 
 import { clearStoredRefreshToken, clearStoredToken, getStoredToken, setSessionExpiredHandler, setStoredRefreshToken, setStoredToken } from '@/src/api/client';
+import { invalidateCache } from '@/src/api/cache';
 import { getMisVisitasAsignadasHoy, loginMicrosoft, loginTecnico } from '@/src/api/rids';
 import { clearEntregaState } from '@/src/entregas/entrega-state';
 import { clearEquipoState } from '@/src/equipos/equipo-state';
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           clearEquipoState(),
           clearGestionarEquipoState(),
         ]).catch(() => undefined);
+        invalidateCache();
         setToken(null);
         setTecnico(null);
         Alert.alert('Sesión expirada', 'Tu sesión expiró. Inicia sesión nuevamente.');
@@ -141,6 +143,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           clearEquipoState(),
           clearGestionarEquipoState(),
         ]);
+        invalidateCache();
         setToken(null);
         setTecnico(null);
       },

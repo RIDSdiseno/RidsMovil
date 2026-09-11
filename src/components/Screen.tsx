@@ -10,11 +10,13 @@ type ScreenProps = PropsWithChildren<{
   scroll?: boolean;
   scrollEnabled?: boolean;
   bottomNavigation?: ReactNode;
+  extendUnderNavigation?: boolean;
 }>;
 
 export function Screen({
   bottomNavigation,
   children,
+  extendUnderNavigation = false,
   onRefresh,
   refreshing = false,
   scroll = true,
@@ -23,7 +25,7 @@ export function Screen({
   if (!scroll) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.content}>{children}</View>
+        <View style={[styles.content, extendUnderNavigation && styles.extendedContent]}>{children}</View>
         {bottomNavigation}
       </SafeAreaView>
     );
@@ -57,5 +59,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
     paddingBottom: 120,
+  },
+  extendedContent: {
+    paddingBottom: 0,
   },
 });

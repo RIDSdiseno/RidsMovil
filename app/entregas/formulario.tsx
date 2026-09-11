@@ -393,7 +393,7 @@ export default function EntregaFormularioScreen() {
             <Text style={styles.receptorText}>{receptorEmail || 'Selecciona usuario o ingreso manual'}</Text>
             {receptorRut ? <Text style={styles.receptorText}>RUT: {receptorRut}</Text> : null}
           </View>
-          <Ionicons color={colors.muted} name="chevron-forward" size={20} />
+          <Ionicons color={ridsPalette.cyanDark} name="chevron-forward" size={20} />
         </Pressable>
       </Section>
 

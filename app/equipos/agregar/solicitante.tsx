@@ -100,7 +100,7 @@ export default function AgregarEquipoSolicitanteScreen() {
   }
 
   return (
-    <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
+    <Screen bottomNavigation={<BottomNavigation />} extendUnderNavigation scroll={false}>
       <RidsFlowHeader
         icon="person-outline"
         label="NUEVO EQUIPO · PASO 2 DE 3"
@@ -124,7 +124,7 @@ export default function AgregarEquipoSolicitanteScreen() {
         />
         {search ? (
           <Pressable hitSlop={10} onPress={() => setSearch('')}>
-            <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+            <Ionicons color={ridsPalette.cyanDark} name="close-circle" size={19} />
           </Pressable>
         ) : null}
       </View>
@@ -140,7 +140,7 @@ export default function AgregarEquipoSolicitanteScreen() {
         refreshControl={
           <RefreshControl colors={[colors.brand]} onRefresh={refreshScreen} refreshing={refreshing} tintColor={colors.brand} />
         }
-        scrollIndicatorInsets={{ bottom: 150 }}
+        scrollIndicatorInsets={{ bottom: 84 }}
         style={styles.listScroll}
         showsVerticalScrollIndicator={false}>
         {filteredSolicitantes.length === 0 ? (
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 8,
-    paddingBottom: 190,
+    paddingBottom: 110,
     paddingTop: 14,
   },
   listScroll: {

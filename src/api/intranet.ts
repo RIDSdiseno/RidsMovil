@@ -1,6 +1,6 @@
 // src/api/intranet.ts
 import { INTRANET_API_URL } from './config';
-import { cachedRequest } from './cache';
+import { cachedRequest, getCachedData } from './cache';
 
 export type AgendaTecnico = {
   tecnico: {
@@ -67,5 +67,11 @@ export function getAgendaMensualCached(params: AgendaParams, force = false) {
     `agenda:${params.year}:${params.month}:${params.tecnico ?? ''}`,
     () => getAgendaMensual(params),
     { force },
+  );
+}
+
+export function getAgendaMensualCache(params: AgendaParams) {
+  return getCachedData<AgendaVisita[]>(
+    `agenda:${params.year}:${params.month}:${params.tecnico ?? ''}`,
   );
 }

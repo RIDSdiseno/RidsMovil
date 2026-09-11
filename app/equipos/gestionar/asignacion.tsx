@@ -19,12 +19,14 @@ import {
   getClientesCached,
   getSolicitantesListCached,
 } from '@/src/api/rids';
+import { useAuth } from '@/src/auth/AuthContext';
 
 import { AppButton } from '@/src/components/AppButton';
 import { TextInput } from '@/src/components/AppTextInput';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
 import { Screen } from '@/src/components/Screen';
+import { ordenarEmpresasConFavoritas, useEmpresasFavoritas } from '@/src/empresas/empresas-favoritas';
 
 import {
   loadGestionarEquipoState,
@@ -43,6 +45,9 @@ import {
 import { getSolicitanteId } from '@/src/visitas/visita-utils';
 
 export default function CambiarAsignacionEquipoScreen() {
+  const { tecnico } = useAuth();
+  const tecnicoId = tecnico?.id_tecnico ?? tecnico?.id ?? null;
+  const { favoritos, isFavorita, isPending, sincronizar: sincronizarFavoritos, toggleFavorita } = useEmpresasFavoritas(tecnicoId);
   const [equipo, setEquipo] =
     useState<Equipo | null>(null);
 
@@ -82,6 +87,11 @@ export default function CambiarAsignacionEquipoScreen() {
         ) ?? null,
       [clientes, empresaId],
     );
+
+  const clientesOrdenados = useMemo(
+    () => ordenarEmpresasConFavoritas(clientes, favoritos),
+    [clientes, favoritos],
+  );
 
   const filteredSolicitantes =
     useMemo(() => {
@@ -222,9 +232,17 @@ export default function CambiarAsignacionEquipoScreen() {
     try {
       setRefreshing(true);
 
-      await loadScreen(true);
+      await Promise.all([loadScreen(true), sincronizarFavoritos()]);
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  async function toggleFavorito(cliente: Cliente) {
+    try {
+      await toggleFavorita(cliente);
+    } catch {
+      Alert.alert('Favoritos', 'No se pudo actualizar la empresa favorita.');
     }
   }
 
@@ -398,7 +416,7 @@ export default function CambiarAsignacionEquipoScreen() {
         </Text>
 
         <Ionicons
-          color="#98A2B3"
+          color={ridsPalette.cyanDark}
           name="chevron-down"
           size={18}
         />
@@ -557,7 +575,7 @@ export default function CambiarAsignacionEquipoScreen() {
                     >
                       <Ionicons
                         color={
-                          colors.brand
+                          ridsPalette.cyanDark
                         }
                         name="person-outline"
                         size={24}
@@ -699,7 +717,7 @@ export default function CambiarAsignacionEquipoScreen() {
                   null ? (
                   <Ionicons
                     color={
-                      colors.brand
+                      ridsPalette.cyanDark
                     }
                     name="checkmark"
                     size={18}
@@ -707,7 +725,7 @@ export default function CambiarAsignacionEquipoScreen() {
                 ) : null}
               </Pressable>
 
-              {clientes.map(
+              {clientesOrdenados.map(
                 (cliente) => {
                   const active =
                     empresaId ===
@@ -740,15 +758,26 @@ export default function CambiarAsignacionEquipoScreen() {
                         }
                       </Text>
 
-                      {active ? (
-                        <Ionicons
-                          color={
-                            colors.brand
-                          }
-                          name="checkmark"
-                          size={18}
-                        />
-                      ) : null}
+                      <View style={styles.modalOptionActions}>
+                        <Pressable
+                          accessibilityLabel={isFavorita(cliente) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                          disabled={isPending(cliente)}
+                          hitSlop={8}
+                          onPress={(event) => {
+                            event.stopPropagation();
+                            void toggleFavorito(cliente);
+                          }}
+                          style={styles.favoriteButton}>
+                          {isPending(cliente) ? (
+                            <ActivityIndicator color={ridsPalette.cyanDark} size="small" />
+                          ) : (
+                            <Ionicons color={ridsPalette.cyanDark} name={isFavorita(cliente) ? 'star' : 'star-outline'} size={18} />
+                          )}
+                        </Pressable>
+                        {active ? (
+                          <Ionicons color={ridsPalette.cyanDark} name="checkmark" size={18} />
+                        ) : null}
+                      </View>
                     </Pressable>
                   );
                 },
@@ -990,5 +1019,20 @@ const styles =
     modalOptionTextActive: {
       color: ridsPalette.cyanDark,
       fontWeight: '800',
+    },
+
+    modalOptionActions: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 9,
+    },
+
+    favoriteButton: {
+      alignItems: 'center',
+      backgroundColor: ridsPalette.cyanSoft,
+      borderRadius: 10,
+      height: 30,
+      justifyContent: 'center',
+      width: 30,
     },
   });

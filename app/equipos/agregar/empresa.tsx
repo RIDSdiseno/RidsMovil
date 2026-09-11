@@ -6,20 +6,25 @@ import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleS
 import { TextInput } from '@/src/components/AppTextInput';
 
 import { getClientesCached } from '@/src/api/rids';
+import { useAuth } from '@/src/auth/AuthContext';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
 import { Screen } from '@/src/components/Screen';
+import { ordenarEmpresasConFavoritas, useEmpresasFavoritas } from '@/src/empresas/empresas-favoritas';
 import { EquipoNuevoState, getInitialEquipoState, loadEquipoState, saveEquipoState } from '@/src/equipos/equipo-state';
 import { colors } from '@/src/theme/colors';
 import { ridsPalette } from '@/src/theme/rids-palette';
 import { Cliente } from '@/src/types/api';
 
 export default function AgregarEquipoEmpresaScreen() {
+  const { tecnico } = useAuth();
+  const tecnicoId = tecnico?.id_tecnico ?? tecnico?.id ?? null;
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [equipoState, setEquipoState] = useState<EquipoNuevoState>(getInitialEquipoState());
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { favoritos, isFavorita, isPending, sincronizar: sincronizarFavoritos, toggleFavorita } = useEmpresasFavoritas(tecnicoId);
 
   const filteredClientes = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -29,8 +34,8 @@ export default function AgregarEquipoEmpresaScreen() {
         )
       : clientes;
 
-    return [...base].sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [clientes, search]);
+    return ordenarEmpresasConFavoritas(base, favoritos);
+  }, [clientes, favoritos, search]);
 
   useEffect(() => {
     async function boot() {
@@ -56,7 +61,7 @@ export default function AgregarEquipoEmpresaScreen() {
   async function refreshScreen() {
     try {
       setRefreshing(true);
-      await loadEmpresas(true);
+      await Promise.all([loadEmpresas(true), sincronizarFavoritos()]);
       setEquipoState(await loadEquipoState());
     } finally {
       setRefreshing(false);
@@ -74,8 +79,16 @@ export default function AgregarEquipoEmpresaScreen() {
     router.push('/equipos/agregar/solicitante');
   }
 
+  async function toggleFavorito(cliente: Cliente) {
+    try {
+      await toggleFavorita(cliente);
+    } catch {
+      Alert.alert('Favoritos', 'No se pudo actualizar la empresa favorita.');
+    }
+  }
+
   return (
-    <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
+    <Screen bottomNavigation={<BottomNavigation />} extendUnderNavigation scroll={false}>
       <RidsFlowHeader
         icon="business-outline"
         label="NUEVO EQUIPO · PASO 1 DE 3"
@@ -94,7 +107,7 @@ export default function AgregarEquipoEmpresaScreen() {
         />
         {search ? (
           <Pressable hitSlop={10} onPress={() => setSearch('')}>
-            <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+            <Ionicons color={ridsPalette.cyanDark} name="close-circle" size={19} />
           </Pressable>
         ) : null}
       </View>
@@ -113,7 +126,7 @@ export default function AgregarEquipoEmpresaScreen() {
         refreshControl={
           <RefreshControl colors={[colors.brand]} onRefresh={refreshScreen} refreshing={refreshing} tintColor={colors.brand} />
         }
-        scrollIndicatorInsets={{ bottom: 150 }}
+        scrollIndicatorInsets={{ bottom: 84 }}
         style={styles.companyScroll}
         showsVerticalScrollIndicator={false}>
         {!loading && filteredClientes.length === 0 ? (
@@ -126,8 +139,11 @@ export default function AgregarEquipoEmpresaScreen() {
         {filteredClientes.map((cliente) => (
           <EmpresaCard
             cliente={cliente}
+            favorite={isFavorita(cliente)}
+            favoriteLoading={isPending(cliente)}
             key={cliente.id_empresa}
             onPress={() => selectEmpresa(cliente)}
+            onToggleFavorite={() => toggleFavorito(cliente)}
             selected={cliente.id_empresa === equipoState.empresa?.id_empresa}
           />
         ))}
@@ -136,7 +152,21 @@ export default function AgregarEquipoEmpresaScreen() {
   );
 }
 
-function EmpresaCard({ cliente, onPress, selected }: { cliente: Cliente; onPress: () => void; selected: boolean }) {
+function EmpresaCard({
+  cliente,
+  favorite,
+  favoriteLoading,
+  onPress,
+  onToggleFavorite,
+  selected,
+}: {
+  cliente: Cliente;
+  favorite: boolean;
+  favoriteLoading: boolean;
+  onPress: () => void;
+  onToggleFavorite: () => void;
+  selected: boolean;
+}) {
   const rutText = cliente.detalleEmpresa?.rut ? `RUT ${cliente.detalleEmpresa.rut}` : 'RUT no registrado';
 
   return (
@@ -147,13 +177,30 @@ function EmpresaCard({ cliente, onPress, selected }: { cliente: Cliente; onPress
         <View style={styles.companyIcon}>
           <Ionicons color={ridsPalette.cyanDark} name="business-outline" size={21} />
         </View>
-        {selected ? (
-          <View style={styles.companyCheck}>
-            <Ionicons color={colors.white} name="checkmark" size={14} />
-          </View>
-        ) : (
-          <Ionicons color="#B7C0CE" name="chevron-forward" size={18} />
-        )}
+        <View style={styles.companyActions}>
+          <Pressable
+            accessibilityLabel={favorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+            disabled={favoriteLoading}
+            hitSlop={8}
+            onPress={(event) => {
+              event.stopPropagation();
+              onToggleFavorite();
+            }}
+            style={styles.favoriteButton}>
+            {favoriteLoading ? (
+              <ActivityIndicator color={ridsPalette.cyanDark} size="small" />
+            ) : (
+              <Ionicons color={ridsPalette.cyanDark} name={favorite ? 'star' : 'star-outline'} size={19} />
+            )}
+          </Pressable>
+          {selected ? (
+            <View style={styles.companyCheck}>
+              <Ionicons color={colors.white} name="checkmark" size={14} />
+            </View>
+          ) : (
+            <Ionicons color={ridsPalette.cyanDark} name="chevron-forward" size={18} />
+          )}
+        </View>
       </View>
       <Text style={styles.companyTitle}>{cliente.nombre}</Text>
       <Text style={styles.companySubtitle}>{rutText}</Text>
@@ -210,7 +257,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    paddingBottom: 190,
+    paddingBottom: 110,
     paddingTop: 14,
   },
   companyScroll: {
@@ -237,6 +284,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  companyActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  favoriteButton: {
+    alignItems: 'center',
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 10,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
   },
   companyIcon: {
     alignItems: 'center',

@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { getHistorialPorTecnicoCached } from '@/src/api/rids';
+import { getHistorialPorTecnicoCache, getHistorialPorTecnicoCached } from '@/src/api/rids';
 import { useAuth } from '@/src/auth/AuthContext';
 import { AppButton } from '@/src/components/AppButton';
 import { Screen } from '@/src/components/Screen';
@@ -12,11 +12,13 @@ import { HistorialVisita } from '@/src/types/api';
 
 export default function HistorialVisitasScreen() {
   const { tecnico } = useAuth();
-  const [historial, setHistorial] = useState<HistorialVisita[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
   const tecnicoId = tecnico?.id_tecnico ?? tecnico?.id ?? null;
+  const cachedHistorial = tecnicoId ? getHistorialPorTecnicoCache(tecnicoId, 1, 100) : null;
+  const [historial, setHistorial] = useState<HistorialVisita[]>(
+    cachedHistorial?.historial ?? cachedHistorial?.data ?? cachedHistorial?.visitas ?? [],
+  );
+  const [loading, setLoading] = useState(!cachedHistorial);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadScreen();
@@ -26,6 +28,13 @@ export default function HistorialVisitasScreen() {
 
   async function loadScreen() {
     if (!tecnicoId) {
+      setLoading(false);
+      return;
+    }
+
+    const cached = getHistorialPorTecnicoCache(tecnicoId, 1, 100);
+    if (cached) {
+      setHistorial(cached.historial ?? cached.data ?? cached.visitas ?? []);
       setLoading(false);
       return;
     }

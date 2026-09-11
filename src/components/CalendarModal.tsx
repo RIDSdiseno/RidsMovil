@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -63,11 +64,11 @@ export function CalendarModal({ visible, onClose, onSelect, value, title }: Cale
 
           <View style={styles.header}>
             <Pressable hitSlop={10} onPress={() => cambiarMes(-1)}>
-              <Ionicons color={colors.brand} name="chevron-back" size={22} />
+              <Ionicons color={ridsPalette.cyanDark} name="chevron-back" size={22} />
             </Pressable>
             <Text style={styles.headerText}>{MESES[cursor.month]} {cursor.year}</Text>
             <Pressable hitSlop={10} onPress={() => cambiarMes(1)}>
-              <Ionicons color={colors.brand} name="chevron-forward" size={22} />
+              <Ionicons color={ridsPalette.cyanDark} name="chevron-forward" size={22} />
             </Pressable>
           </View>
 
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   dayCellSelected: {
-    backgroundColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
   },
   dayText: {
     color: colors.ink,
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   closeButtonText: {
-    color: colors.brand,
+    color: ridsPalette.cyanDark,
     fontSize: 13,
     fontWeight: '800',
   },

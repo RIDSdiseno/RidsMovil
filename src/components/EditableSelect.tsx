@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { TextInput } from '@/src/components/AppTextInput';
 import { colors } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 
 type EditableSelectProps = {
   label: string;
@@ -48,7 +49,7 @@ export function EditableSelect({
           value={value}
         />
         <Pressable hitSlop={8} onPress={() => setOpen((prev) => !prev)} style={styles.chevronButton}>
-          <Ionicons color="#98A2B3" name={open ? 'chevron-up' : 'chevron-down'} size={20} />
+          <Ionicons color={ridsPalette.cyanDark} name={open ? 'chevron-up' : 'chevron-down'} size={20} />
         </Pressable>
       </View>
 
@@ -66,7 +67,7 @@ export function EditableSelect({
                   }}
                   style={styles.option}>
                   <Text style={[styles.optionText, activo && styles.optionTextActive]}>{opt}</Text>
-                  {activo ? <Ionicons color={colors.brand} name="checkmark" size={18} /> : null}
+                  {activo ? <Ionicons color={ridsPalette.cyanDark} name="checkmark" size={18} /> : null}
                 </Pressable>
               );
             })}
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   optionTextActive: {
-    color: colors.brand,
+    color: ridsPalette.cyanDark,
     fontWeight: '800',
   },
 });

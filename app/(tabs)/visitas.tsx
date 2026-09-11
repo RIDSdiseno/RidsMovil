@@ -16,6 +16,7 @@ import { useAuth } from '@/src/auth/AuthContext';
 import { TextInput } from '@/src/components/AppTextInput';
 import { RidsModuleBanner } from '@/src/components/RidsModuleBanner';
 import { Screen } from '@/src/components/Screen';
+import { getEmpresaFavoritaKey, useEmpresasFavoritas } from '@/src/empresas/empresas-favoritas';
 import { colors } from '@/src/theme/colors';
 import { ridsPalette } from '@/src/theme/rids-palette';
 import { Cliente } from '@/src/types/api';
@@ -26,20 +27,16 @@ import {
   VisitaEnCursoState,
 } from '@/src/visitas/visita-state';
 
-import {
-  getEmpresasFavoritas,
-  toggleEmpresaFavorita,
-} from '@/src/visitas/favoritos-empresas';
-
 export default function VisitasScreen() {
   const { tecnico } = useAuth();
+  const tecnicoId = tecnico?.id_tecnico ?? tecnico?.id ?? null;
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [searchEmpresa, setSearchEmpresa] = useState('');
-  const [empresasFavoritas, setEmpresasFavoritas,] = useState<number[]>([]);
   const [visitaState, setVisitaState] = useState<VisitaEnCursoState>(getInitialVisitaState());
   const [loadingEmpresas, setLoadingEmpresas] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectingEmpresaId, setSelectingEmpresaId] = useState<number | null>(null);
+  const { favoritos, isPending, sincronizar: sincronizarFavoritos, toggleFavorita } = useEmpresasFavoritas(tecnicoId);
 
   const filteredClientes = useMemo(() => {
     const term = searchEmpresa.trim().toLowerCase();
@@ -63,13 +60,11 @@ export default function VisitasScreen() {
 
       return filteredClientes.filter(
         (cliente) =>
-          empresasFavoritas.includes(
-            cliente.id_empresa,
-          ),
+          favoritos.has(getEmpresaFavoritaKey(cliente)),
       );
     }, [
       filteredClientes,
-      empresasFavoritas,
+      favoritos,
       hayBusqueda,
     ]);
 
@@ -81,31 +76,19 @@ export default function VisitasScreen() {
 
       return filteredClientes.filter(
         (cliente) =>
-          !empresasFavoritas.includes(
-            cliente.id_empresa,
-          ),
+          !favoritos.has(getEmpresaFavoritaKey(cliente)),
       );
     }, [
       filteredClientes,
-      empresasFavoritas,
+      favoritos,
       hayBusqueda,
     ]);
-
-  async function loadFavoritos() {
-    const favoritos =
-      await getEmpresasFavoritas();
-
-    setEmpresasFavoritas(
-      favoritos,
-    );
-  }
 
   useEffect(() => {
     async function boot() {
       await Promise.all([
         loadEmpresas(),
         hydrateVisita(),
-        loadFavoritos(),
       ]);
     }
 
@@ -136,7 +119,7 @@ export default function VisitasScreen() {
       await Promise.all([
         loadEmpresas(true),
         hydrateVisita(),
-        loadFavoritos(),
+        sincronizarFavoritos(),
       ]);
     } finally {
       setRefreshing(false);
@@ -144,17 +127,10 @@ export default function VisitasScreen() {
   }
 
   async function handleToggleFavorito(
-    empresaId: number,
+    cliente: Cliente,
   ) {
     try {
-      const nuevos =
-        await toggleEmpresaFavorita(
-          empresaId,
-        );
-
-      setEmpresasFavoritas(
-        nuevos,
-      );
+      await toggleFavorita(cliente);
     } catch {
       Alert.alert(
         'Favoritos',
@@ -166,7 +142,6 @@ export default function VisitasScreen() {
   async function handleSelectEmpresa(cliente: Cliente) {
     try {
       setSelectingEmpresaId(cliente.id_empresa);
-      const tecnicoId = tecnico?.id_tecnico ?? tecnico?.id;
       if (!tecnicoId) {
         Alert.alert('Sesion', 'No se encontro el tecnico autenticado. Inicia sesion nuevamente.');
         return;
@@ -190,7 +165,7 @@ export default function VisitasScreen() {
   const selectedEmpresaId = visitaState.empresaId;
 
   return (
-    <Screen scroll={false}>
+    <Screen extendUnderNavigation scroll={false}>
       <RidsModuleBanner
         icon="briefcase-outline"
         label="VISITAS TÉCNICAS"
@@ -208,7 +183,7 @@ export default function VisitasScreen() {
         />
         {searchEmpresa ? (
           <Pressable hitSlop={10} onPress={() => setSearchEmpresa('')}>
-            <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+            <Ionicons color={ridsPalette.cyanDark} name="close-circle" size={19} />
           </Pressable>
         ) : null}
       </View>
@@ -232,7 +207,7 @@ export default function VisitasScreen() {
             tintColor={ridsPalette.cyanDark}
           />
         }
-        scrollIndicatorInsets={{ bottom: 150 }}
+        scrollIndicatorInsets={{ bottom: 84 }}
         style={styles.companyScroll}
         showsVerticalScrollIndicator={false}>
         {!loadingEmpresas && filteredClientes.length === 0 ? (
@@ -250,7 +225,7 @@ export default function VisitasScreen() {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Ionicons
-                  color="#F5B301"
+                  color={ridsPalette.cyanDark}
                   name="star"
                   size={17}
                 />
@@ -272,6 +247,7 @@ export default function VisitasScreen() {
                 <EmpresaCard
                   cliente={cliente}
                   favorite
+                  favoriteLoading={isPending(cliente)}
                   key={`favorite-${cliente.id_empresa}`}
                   loading={
                     selectingEmpresaId ===
@@ -283,9 +259,7 @@ export default function VisitasScreen() {
                     )
                   }
                   onToggleFavorite={() =>
-                    handleToggleFavorito(
-                      cliente.id_empresa,
-                    )
+                    handleToggleFavorito(cliente)
                   }
                   selected={
                     cliente.id_empresa ===
@@ -308,10 +282,9 @@ export default function VisitasScreen() {
             <EmpresaCard
               cliente={cliente}
               favorite={
-                empresasFavoritas.includes(
-                  cliente.id_empresa,
-                )
+                favoritos.has(getEmpresaFavoritaKey(cliente))
               }
+              favoriteLoading={isPending(cliente)}
               key={cliente.id_empresa}
               loading={
                 selectingEmpresaId ===
@@ -323,9 +296,7 @@ export default function VisitasScreen() {
                 )
               }
               onToggleFavorite={() =>
-                handleToggleFavorito(
-                  cliente.id_empresa,
-                )
+                  handleToggleFavorito(cliente)
               }
               selected={
                 cliente.id_empresa ===
@@ -342,6 +313,7 @@ export default function VisitasScreen() {
 function EmpresaCard({
   cliente,
   favorite,
+  favoriteLoading,
   loading,
   onPress,
   onToggleFavorite,
@@ -349,6 +321,7 @@ function EmpresaCard({
 }: {
   cliente: Cliente;
   favorite: boolean;
+  favoriteLoading: boolean;
   loading: boolean;
   onPress: () => void;
   onToggleFavorite: () => void;
@@ -377,6 +350,7 @@ function EmpresaCard({
                 : 'Agregar a favoritos'
             }
             accessibilityRole="button"
+            disabled={favoriteLoading}
             hitSlop={8}
             onPress={(event) => {
               event.stopPropagation();
@@ -391,19 +365,15 @@ function EmpresaCard({
               },
             ]}
           >
-            <Ionicons
-              color={
-                favorite
-                  ? '#F5B301'
-                  : '#98A2B3'
-              }
-              name={
-                favorite
-                  ? 'star'
-                  : 'star-outline'
-              }
-              size={19}
-            />
+            {favoriteLoading ? (
+              <ActivityIndicator color={ridsPalette.cyanDark} size="small" />
+            ) : (
+              <Ionicons
+                color={ridsPalette.cyanDark}
+                name={favorite ? 'star' : 'star-outline'}
+                size={19}
+              />
+            )}
           </Pressable>
 
           {loading ? (
@@ -422,7 +392,7 @@ function EmpresaCard({
           ) : (
             <View style={styles.companyChevron}>
               <Ionicons
-                color={ridsPalette.slate}
+                color={ridsPalette.cyanDark}
                 name="chevron-forward"
                 size={17}
               />
@@ -488,7 +458,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    paddingBottom: 190,
+    paddingBottom: 110,
     paddingTop: 12,
   },
   companyScroll: {

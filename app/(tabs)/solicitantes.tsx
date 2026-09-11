@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
 import { Screen } from '@/src/components/Screen';
 
@@ -11,10 +10,7 @@ import { ridsPalette } from '@/src/theme/rids-palette';
 
 export default function SolicitantesTabScreen() {
     return (
-        <Screen
-            bottomNavigation={<BottomNavigation />}
-            scroll={false}
-        >
+        <Screen scroll={false}>
             <RidsFlowHeader
                 icon="people-outline"
                 label="SOLICITANTES"
@@ -48,12 +44,13 @@ export default function SolicitantesTabScreen() {
                         Actualiza solicitantes desde Microsoft 365 o Google Workspace.
                     </Text>
 
-                    <Ionicons
-                        color="#B7C0CE"
-                        name="chevron-forward"
-                        size={20}
-                        style={styles.chevron}
-                    />
+                    <View style={styles.arrowButton}>
+                        <Ionicons
+                            color={ridsPalette.cyanDark}
+                            name="arrow-forward"
+                            size={18}
+                        />
+                    </View>
                 </Pressable>
             </View>
         </Screen>
@@ -102,9 +99,15 @@ const styles = StyleSheet.create({
         paddingRight: 24,
     },
 
-    chevron: {
-        bottom: 16,
+    arrowButton: {
+        alignItems: 'center',
+        backgroundColor: ridsPalette.cyanSoft,
+        borderRadius: 14,
+        height: 36,
+        justifyContent: 'center',
         position: 'absolute',
-        right: 16,
+        right: 13,
+        top: 13,
+        width: 36,
     },
 });

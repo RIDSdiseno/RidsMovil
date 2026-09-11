@@ -117,7 +117,7 @@ export default function SolicitantesScreen() {
   }
 
   return (
-    <Screen bottomNavigation={<BottomNavigation />} scroll={false}>
+    <Screen bottomNavigation={<BottomNavigation />} extendUnderNavigation scroll={false}>
       <RidsFlowHeader
         icon="people-outline"
         label="VISITA TÉCNICA"
@@ -145,7 +145,7 @@ export default function SolicitantesScreen() {
         />
         {search ? (
           <Pressable hitSlop={10} onPress={() => setSearch('')}>
-            <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+            <Ionicons color={ridsPalette.cyanDark} name="close-circle" size={19} />
           </Pressable>
         ) : null}
       </View>
@@ -166,7 +166,7 @@ export default function SolicitantesScreen() {
             tintColor={colors.brand}
           />
         }
-        scrollIndicatorInsets={{ bottom: 150 }}
+        scrollIndicatorInsets={{ bottom: 84 }}
       style={styles.listScroll}
       showsVerticalScrollIndicator={false}>
         {filteredSolicitantes.length === 0 ? (
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 8,
-    paddingBottom: 190,
+    paddingBottom: 110,
     paddingTop: 14,
   },
   listScroll: {

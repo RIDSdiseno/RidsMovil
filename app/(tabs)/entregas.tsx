@@ -7,9 +7,11 @@ import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platfo
 import { TextInput } from '@/src/components/AppTextInput';
 
 import { crearClienteEconnet, getClientesCached, getClientesPickupEconnetCached } from '@/src/api/rids';
+import { useAuth } from '@/src/auth/AuthContext';
 import { AppButton } from '@/src/components/AppButton';
 import { RidsModuleBanner } from '@/src/components/RidsModuleBanner';
 import { Screen } from '@/src/components/Screen';
+import { EmpresaOrigen, ordenarEmpresasConFavoritas, useEmpresasFavoritas } from '@/src/empresas/empresas-favoritas';
 import { EntregaBrand, getInitialEntregaState, loadEntregaState, PickUpOperation, saveEntregaState } from '@/src/entregas/entrega-state';
 import { colors } from '@/src/theme/colors';
 import { ridsPalette } from '@/src/theme/rids-palette';
@@ -19,6 +21,8 @@ import { Cliente } from '@/src/types/api';
 const empresaKey = (empresa: Cliente) => `${empresa.origen ?? 'RIDS'}:${empresa.id_empresa}`;
 
 export default function EntregasScreen() {
+  const { tecnico } = useAuth();
+  const tecnicoId = tecnico?.id_tecnico ?? tecnico?.id ?? null;
   const [empresas, setEmpresas] = useState<Cliente[]>([]);
   const [operation, setOperation] = useState<PickUpOperation>('entrega');
   const [selectedBrand, setSelectedBrand] = useState<EntregaBrand | null>(null);
@@ -30,6 +34,7 @@ export default function EntregasScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showNewEmpresa, setShowNewEmpresa] = useState(false);
   const [savingEmpresa, setSavingEmpresa] = useState(false);
+  const { favoritos, isFavorita, isPending, sincronizar: sincronizarFavoritos, toggleFavorita } = useEmpresasFavoritas(tecnicoId);
   const [newEmpresa, setNewEmpresa] = useState<{
     correo: string;
     direccion: string;
@@ -58,8 +63,9 @@ export default function EntregasScreen() {
         )
       : empresas;
 
-    return [...base].sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [empresas, search]);
+    const fallbackOrigen: EmpresaOrigen = selectedBrand === 'econnet' ? 'ECONNET' : 'RIDS';
+    return ordenarEmpresasConFavoritas(base, favoritos, fallbackOrigen);
+  }, [empresas, favoritos, search, selectedBrand]);
 
   useEffect(() => {
     async function boot() {
@@ -90,7 +96,7 @@ export default function EntregasScreen() {
   async function refreshScreen() {
     try {
       setRefreshing(true);
-      await loadEmpresas(selectedBrand, true);
+      await Promise.all([loadEmpresas(selectedBrand, true), sincronizarFavoritos()]);
     } finally {
       setRefreshing(false);
     }
@@ -109,6 +115,15 @@ export default function EntregasScreen() {
     setSelectedEmpresaKey(empresaKey(empresa));
     setSearch('');
     router.push(operation === 'retiro' ? '/entregas/retiro-equipos' : '/entregas/formulario');
+  }
+
+  async function toggleFavorito(empresa: Cliente) {
+    try {
+      const fallbackOrigen: EmpresaOrigen = selectedBrand === 'econnet' ? 'ECONNET' : 'RIDS';
+      await toggleFavorita(empresa, fallbackOrigen);
+    } catch {
+      Alert.alert('Favoritos', 'No se pudo actualizar la empresa favorita.');
+    }
   }
 
   async function selectBrand(brand: EntregaBrand) {
@@ -162,7 +177,7 @@ export default function EntregasScreen() {
   }
 
   return (
-    <Screen scroll={false}>
+    <Screen extendUnderNavigation scroll={false}>
       <RidsModuleBanner
         icon="cube-outline"
         label="ENTREGAS Y RETIROS"
@@ -198,7 +213,7 @@ export default function EntregasScreen() {
             />
             {search ? (
               <Pressable hitSlop={10} onPress={() => setSearch('')}>
-                <Ionicons color={ridsPalette.slate} name="close-circle" size={19} />
+                <Ionicons color={ridsPalette.cyanDark} name="close-circle" size={19} />
               </Pressable>
             ) : null}
           </View>
@@ -232,7 +247,7 @@ export default function EntregasScreen() {
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Nueva entidad</Text>
                   <Pressable hitSlop={10} onPress={() => setShowNewEmpresa(false)}>
-                    <Ionicons color={colors.muted} name="close" size={22} />
+                    <Ionicons color={ridsPalette.cyanDark} name="close" size={22} />
                   </Pressable>
                 </View>
                 <ScrollView
@@ -326,15 +341,36 @@ export default function EntregasScreen() {
                   <View style={styles.companyIcon}>
                     <Ionicons color={ridsPalette.cyanDark} name="business-outline" size={21} />
                   </View>
-                  {selectedEmpresaKey === empresaKey(empresa) ? (
-                    <View style={styles.companyCheck}>
-                      <Ionicons color={colors.white} name="checkmark" size={14} />
-                    </View>
-                  ) : (
-                    <View style={styles.companyChevron}>
-                      <Ionicons color={ridsPalette.slate} name="chevron-forward" size={17} />
-                    </View>
-                  )}
+                  <View style={styles.companyActions}>
+                    <Pressable
+                      accessibilityLabel={isFavorita(empresa, selectedBrand === 'econnet' ? 'ECONNET' : 'RIDS') ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                      disabled={isPending(empresa, selectedBrand === 'econnet' ? 'ECONNET' : 'RIDS')}
+                      hitSlop={8}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        void toggleFavorito(empresa);
+                      }}
+                      style={styles.favoriteButton}>
+                      {isPending(empresa, selectedBrand === 'econnet' ? 'ECONNET' : 'RIDS') ? (
+                        <ActivityIndicator color={ridsPalette.cyanDark} size="small" />
+                      ) : (
+                        <Ionicons
+                          color={ridsPalette.cyanDark}
+                          name={isFavorita(empresa, selectedBrand === 'econnet' ? 'ECONNET' : 'RIDS') ? 'star' : 'star-outline'}
+                          size={19}
+                        />
+                      )}
+                    </Pressable>
+                    {selectedEmpresaKey === empresaKey(empresa) ? (
+                      <View style={styles.companyCheck}>
+                        <Ionicons color={colors.white} name="checkmark" size={14} />
+                      </View>
+                    ) : (
+                      <View style={styles.companyChevron}>
+                        <Ionicons color={ridsPalette.cyanDark} name="chevron-forward" size={17} />
+                      </View>
+                    )}
+                  </View>
                 </View>
                 <Text numberOfLines={2} style={styles.companyTitle}>{empresa.nombre}</Text>
                 <Text numberOfLines={1} style={styles.companySubtitle}>
@@ -342,7 +378,7 @@ export default function EntregasScreen() {
                 </Text>
               </Pressable>
             )}
-            scrollIndicatorInsets={{ bottom: 150 }}
+            scrollIndicatorInsets={{ bottom: 84 }}
             style={styles.companyScroll}
             showsVerticalScrollIndicator={false}
           />
@@ -368,13 +404,6 @@ function BrandCard({
         styles.brandCard,
         pressed && styles.companyPressed,
       ]}>
-      <View style={styles.brandArrow}>
-        <Ionicons
-          color={ridsPalette.cyanDark}
-          name="arrow-forward"
-          size={18}
-        />
-      </View>
       <Image contentFit="contain" source={logo} style={styles.brandLogo} />
     </Pressable>
   );
@@ -558,17 +587,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: 20,
   },
-  brandArrow: {
-    alignItems: 'center',
-    backgroundColor: ridsPalette.cyanSoft,
-    borderRadius: 14,
-    height: 36,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 13,
-    top: 13,
-    width: 36,
-  },
   brandLogo: {
     height: 86,
     width: '86%',
@@ -636,7 +654,7 @@ const styles = StyleSheet.create({
   },
   companyList: {
     gap: 8,
-    paddingBottom: 190,
+    paddingBottom: 110,
     paddingTop: 12,
   },
   companyRow: {
@@ -668,6 +686,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  companyActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+  },
+  favoriteButton: {
+    alignItems: 'center',
+    backgroundColor: ridsPalette.cyanSoft,
+    borderRadius: 10,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
   },
   companyIcon: {
     alignItems: 'center',

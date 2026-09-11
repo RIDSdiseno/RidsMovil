@@ -28,6 +28,11 @@ export type Cliente = {
   dominios?: string[];
 };
 
+export type EmpresaFavorita = {
+  empresaId: number;
+  origen: 'RIDS' | 'ECONNET';
+};
+
 export type Equipo = {
   id_equipo: number;
   serial?: string;

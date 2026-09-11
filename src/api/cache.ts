@@ -70,3 +70,10 @@ export function getCachedData<T>(key: string): T | null {
   if (!cached || cached.expiresAt <= Date.now()) return null;
   return cached.data;
 }
+
+export function setCachedData<T>(key: string, data: T, ttlMs = DEFAULT_TTL_MS) {
+  cache.set(key, {
+    data,
+    expiresAt: Date.now() + ttlMs,
+  });
+}

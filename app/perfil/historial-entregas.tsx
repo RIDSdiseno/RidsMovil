@@ -5,19 +5,21 @@ import * as Sharing from 'expo-sharing';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { getEntregasCached, getEvidenciasPorEntregaCached } from '@/src/api/rids';
+import { getEntregasCache, getEntregasCached, getEvidenciasPorEntregaCached } from '@/src/api/rids';
 import { AppButton } from '@/src/components/AppButton';
 import { Screen } from '@/src/components/Screen';
 import { colors, shadow } from '@/src/theme/colors';
+import { ridsPalette } from '@/src/theme/rids-palette';
 import { Entrega, EvidenciaEntrega } from '@/src/types/api';
 
 export default function HistorialEntregasScreen() {
-  const [entregas, setEntregas] = useState<Entrega[]>([]);
+  const cachedEntregas = getEntregasCache();
+  const [entregas, setEntregas] = useState<Entrega[]>(cachedEntregas?.entregas ?? []);
   const [evidenciasByEntrega, setEvidenciasByEntrega] = useState<Record<number, Entrega['evidencias']>>({});
   const [expandedEntregaId, setExpandedEntregaId] = useState<number | null>(null);
   const [loadingEvidenciasId, setLoadingEvidenciasId] = useState<number | null>(null);
   const [sharingEvidenciaId, setSharingEvidenciaId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedEntregas);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -25,6 +27,13 @@ export default function HistorialEntregasScreen() {
   }, []);
 
   async function loadScreen() {
+    const cached = getEntregasCache();
+    if (cached) {
+      setEntregas(cached.entregas ?? []);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await getEntregasCached();
@@ -120,7 +129,7 @@ export default function HistorialEntregasScreen() {
                     Recibe {entrega.receptorNombre} · {new Date(entrega.fecha).toLocaleDateString('es-CL')}
                   </Text>
                 </View>
-                <Ionicons color={colors.muted} name={expanded ? 'chevron-up' : 'chevron-down'} size={20} />
+                <Ionicons color={ridsPalette.cyanDark} name={expanded ? 'chevron-up' : 'chevron-down'} size={20} />
               </Pressable>
 
               {expanded ? (

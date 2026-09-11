@@ -10,6 +10,7 @@ import {
   CrearUsuarioPayload,
   CrearVisitaPayload,
   Entrega,
+  EmpresaFavorita,
   EnviarPdfEntregaPayload,
   Equipo,
   EquipoDetalle,
@@ -26,7 +27,7 @@ import {
   VisitaAsignada,
 } from '@/src/types/api';
 
-import { cachedRequest, getCachedData, invalidateCache } from './cache';
+import { cachedRequest, getCachedData, invalidateCache, setCachedData } from './cache';
 import { apiRequest, getStoredToken } from './client';
 import { API_URL } from './config';
 
@@ -52,6 +53,24 @@ export function getClientes() {
 
 export function getClientesCached(force = false) {
   return cachedRequest('clientes', getClientes, { force });
+}
+
+export function getEmpresasFavoritas() {
+  return apiRequest<{ favoritos: EmpresaFavorita[] }>('/auth/empresas-favoritas');
+}
+
+export function agregarEmpresaFavorita(favorito: EmpresaFavorita) {
+  return apiRequest<{ favorito: EmpresaFavorita }>(
+    `/auth/empresas-favoritas/${encodeURIComponent(favorito.origen)}/${favorito.empresaId}`,
+    { method: 'PUT' },
+  );
+}
+
+export function eliminarEmpresaFavorita(favorito: EmpresaFavorita) {
+  return apiRequest<{ ok: boolean }>(
+    `/auth/empresas-favoritas/${encodeURIComponent(favorito.origen)}/${favorito.empresaId}`,
+    { method: 'DELETE' },
+  );
 }
 
 export function getClientesEconnet() {
@@ -148,6 +167,32 @@ export function getMisVisitasAsignadasHoy(fecha?: string) {
   );
 }
 
+type AgendaAsignadaResponse = Awaited<ReturnType<typeof getMisVisitasAsignadasHoy>>;
+
+function getAgendaAsignadaCacheKey(tecnicoId: number, fecha: string) {
+  return `agenda-asignada:${tecnicoId}:${fecha}`;
+}
+
+export function getMisVisitasAsignadasHoyCached(tecnicoId: number, fecha: string, force = false) {
+  return cachedRequest(
+    getAgendaAsignadaCacheKey(tecnicoId, fecha),
+    () => getMisVisitasAsignadasHoy(fecha),
+    { force },
+  );
+}
+
+export function getMisVisitasAsignadasHoyCache(tecnicoId: number, fecha: string) {
+  return getCachedData<AgendaAsignadaResponse>(getAgendaAsignadaCacheKey(tecnicoId, fecha));
+}
+
+export function setMisVisitasAsignadasHoyCache(
+  tecnicoId: number,
+  fecha: string,
+  response: AgendaAsignadaResponse,
+) {
+  setCachedData(getAgendaAsignadaCacheKey(tecnicoId, fecha), response);
+}
+
 export function iniciarRutaVisitaAsignada(agendaId: number) {
   return apiRequest<{ visita: VisitaAsignada }>(`/auth/agenda/${agendaId}/iniciar-ruta`, {
     method: 'POST',
@@ -194,6 +239,12 @@ export function getHistorialPorTecnicoCached(tecnicoId: number, page = 1, limit 
     `historial-visitas:${tecnicoId}:${page}:${limit}`,
     () => getHistorialPorTecnico(tecnicoId, page, limit),
     { force },
+  );
+}
+
+export function getHistorialPorTecnicoCache(tecnicoId: number, page = 1, limit = 5) {
+  return getCachedData<Awaited<ReturnType<typeof getHistorialPorTecnico>>>(
+    `historial-visitas:${tecnicoId}:${page}:${limit}`,
   );
 }
 
@@ -416,6 +467,10 @@ export function getEntregasCached(force = false, page = 1, limit = 50) {
     () => getEntregas(page, limit),
     { force },
   );
+}
+
+export function getEntregasCache(page = 1, limit = 50) {
+  return getCachedData<Awaited<ReturnType<typeof getEntregas>>>(`entregas:${page}:${limit}`);
 }
 
 export function crearEntrega(payload: CrearEntregaPayload) {

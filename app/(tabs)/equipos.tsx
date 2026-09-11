@@ -82,10 +82,10 @@ function ActionCard({
       ]}>
       <View style={styles.actionTopRow}>
         <View style={[styles.actionIcon, { backgroundColor: iconBackground }]}>
-          <Ionicons color={disabled ? colors.muted : color} name={icon} size={28} />
+          <Ionicons color={ridsPalette.cyanDark} name={icon} size={28} />
         </View>
         <View style={styles.actionArrow}>
-          <Ionicons color={disabled ? colors.muted : color} name="arrow-forward" size={20} />
+          <Ionicons color={ridsPalette.cyanDark} name="arrow-forward" size={20} />
         </View>
       </View>
       <Text style={[styles.actionLabel, { color }]}>{label}</Text>

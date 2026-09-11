@@ -272,7 +272,7 @@ export default function AgregarEquipoFormularioScreen() {
           <Text style={styles.summaryTitle}>{equipoState.solicitante?.nombre}</Text>
           <Text style={styles.summaryText}>{equipoState.empresa?.nombre}</Text>
         </View>
-        <Ionicons color="#B7C0CE" name="chevron-forward" size={18} />
+        <Ionicons color={ridsPalette.cyanDark} name="chevron-forward" size={18} />
       </Pressable>
 
       <Section title="Informacion requerida">
@@ -292,7 +292,7 @@ export default function AgregarEquipoFormularioScreen() {
           <Text style={styles.pickerButtonText}>
             {TIPO_EQUIPO_OPTIONS.find((o) => o.value === form.tipo)?.label ?? 'Selecciona tipo'}
           </Text>
-          <Ionicons color="#98A2B3" name="chevron-down" size={18} />
+          <Ionicons color={ridsPalette.cyanDark} name="chevron-down" size={18} />
         </Pressable>
 
         <Text style={styles.fieldLabel}>Estado del equipo</Text>
@@ -300,7 +300,7 @@ export default function AgregarEquipoFormularioScreen() {
           <Text style={styles.pickerButtonText}>
             {ESTADO_EQUIPO_OPTIONS.find((o) => o.value === form.estado)?.label ?? 'Selecciona estado'}
           </Text>
-          <Ionicons color="#98A2B3" name="chevron-down" size={18} />
+          <Ionicons color={ridsPalette.cyanDark} name="chevron-down" size={18} />
         </Pressable>
 
         <Field
@@ -744,8 +744,8 @@ const styles = StyleSheet.create({
     width: 22,
   },
   checkboxActive: {
-    backgroundColor: colors.brand,
-    borderColor: colors.brand,
+    backgroundColor: ridsPalette.cyanDark,
+    borderColor: ridsPalette.cyanDark,
   },
   checkLabel: {
     color: colors.ink,

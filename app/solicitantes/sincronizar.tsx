@@ -16,6 +16,7 @@ import {
 import {
     getClientesCached,
 } from '@/src/api/rids';
+import { useAuth } from '@/src/auth/AuthContext';
 
 import {
     SyncProvider,
@@ -28,6 +29,7 @@ import { TextInput } from '@/src/components/AppTextInput';
 import { BottomNavigation } from '@/src/components/BottomNavigation';
 import { RidsFlowHeader } from '@/src/components/RidsFlowHeader';
 import { Screen } from '@/src/components/Screen';
+import { ordenarEmpresasConFavoritas, useEmpresasFavoritas } from '@/src/empresas/empresas-favoritas';
 
 import { colors } from '@/src/theme/colors';
 import { ridsPalette } from '@/src/theme/rids-palette';
@@ -37,6 +39,15 @@ import type {
 } from '@/src/types/api';
 
 export default function SincronizarSolicitantesScreen() {
+    const { tecnico } = useAuth();
+    const tecnicoId = tecnico?.id_tecnico ?? tecnico?.id ?? null;
+    const {
+        favoritos,
+        isFavorita,
+        isPending,
+        sincronizar: sincronizarFavoritos,
+        toggleFavorita,
+    } = useEmpresasFavoritas(tecnicoId);
     const [
         clientes,
         setClientes,
@@ -133,9 +144,10 @@ export default function SincronizarSolicitantesScreen() {
         try {
             setRefreshing(true);
 
-            await loadEmpresas(
-                true,
-            );
+            await Promise.all([
+                loadEmpresas(true),
+                sincronizarFavoritos(),
+            ]);
         } finally {
             setRefreshing(false);
         }
@@ -169,14 +181,10 @@ export default function SincronizarSolicitantesScreen() {
                     )
                     : clientes;
 
-            return [...base].sort(
-                (a, b) =>
-                    a.nombre.localeCompare(
-                        b.nombre,
-                    ),
-            );
+            return ordenarEmpresasConFavoritas(base, favoritos);
         }, [
             clientes,
+            favoritos,
             search,
         ]);
 
@@ -228,6 +236,14 @@ export default function SincronizarSolicitantesScreen() {
         setResultado(null);
         setSearch('');
         setModalOpen(false);
+    }
+
+    async function toggleFavorito(cliente: Cliente) {
+        try {
+            await toggleFavorita(cliente);
+        } catch {
+            Alert.alert('Favoritos', 'No se pudo actualizar la empresa favorita.');
+        }
     }
 
     /* =========================================================
@@ -442,7 +458,7 @@ export default function SincronizarSolicitantesScreen() {
 
                     <Ionicons
                         color={
-                            ridsPalette.slate
+                            ridsPalette.cyanDark
                         }
                         name="chevron-forward"
                         size={19}
@@ -501,7 +517,7 @@ export default function SincronizarSolicitantesScreen() {
                             }
                         >
                             <Ionicons
-                                color="#B54708"
+                                color={ridsPalette.cyanDark}
                                 name="warning-outline"
                                 size={20}
                             />
@@ -889,7 +905,7 @@ export default function SincronizarSolicitantesScreen() {
                             >
                                 <Ionicons
                                     color={
-                                        ridsPalette.slate
+                            ridsPalette.cyanDark
                                     }
                                     name="close"
                                     size={25}
@@ -933,7 +949,7 @@ export default function SincronizarSolicitantesScreen() {
                                 >
                                     <Ionicons
                                         color={
-                                            ridsPalette.slate
+                                            ridsPalette.cyanDark
                                         }
                                         name="close-circle"
                                         size={19}
@@ -1098,19 +1114,34 @@ export default function SincronizarSolicitantesScreen() {
                                                 </Text>
                                             </View>
 
-                                            <Ionicons
-                                                color={
-                                                    selected
-                                                        ? ridsPalette.cyanDark
-                                                        : '#B7C0CE'
-                                                }
-                                                name={
-                                                    selected
-                                                        ? 'checkmark-circle'
-                                                        : 'chevron-forward'
-                                                }
-                                                size={21}
-                                            />
+                                            <View style={styles.companyActions}>
+                                                <Pressable
+                                                    accessibilityLabel={isFavorita(cliente) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                                                    disabled={isPending(cliente)}
+                                                    hitSlop={8}
+                                                    onPress={(event) => {
+                                                        event.stopPropagation();
+                                                        void toggleFavorito(cliente);
+                                                    }}
+                                                    style={styles.favoriteButton}
+                                                >
+                                                    {isPending(cliente) ? (
+                                                        <ActivityIndicator color={ridsPalette.cyanDark} size="small" />
+                                                    ) : (
+                                                        <Ionicons
+                                                            color={ridsPalette.cyanDark}
+                                                            name={isFavorita(cliente) ? 'star' : 'star-outline'}
+                                                            size={19}
+                                                        />
+                                                    )}
+                                                </Pressable>
+
+                                                <Ionicons
+                                                    color={ridsPalette.cyanDark}
+                                                    name={selected ? 'checkmark-circle' : 'chevron-forward'}
+                                                    size={21}
+                                                />
+                                            </View>
                                         </Pressable>
                                     );
                                 },
@@ -1644,6 +1675,21 @@ const styles =
         companyContent: {
             flex: 1,
             marginLeft: 11,
+        },
+
+        companyActions: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            gap: 7,
+        },
+
+        favoriteButton: {
+            alignItems: 'center',
+            backgroundColor: ridsPalette.cyanSoft,
+            borderRadius: 10,
+            height: 30,
+            justifyContent: 'center',
+            width: 30,
         },
 
         companyTitle: {
