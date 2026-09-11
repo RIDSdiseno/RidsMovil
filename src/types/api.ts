@@ -25,6 +25,7 @@ export type Cliente = {
   origen?: string | null;
   telefono?: string | null;
   tieneSucursales?: boolean;
+  dominios?: string[];
 };
 
 export type Equipo = {

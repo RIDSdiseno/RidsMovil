@@ -19,17 +19,23 @@ import { Screen } from '@/src/components/Screen';
 import { colors } from '@/src/theme/colors';
 import { ridsPalette } from '@/src/theme/rids-palette';
 import { Cliente } from '@/src/types/api';
+import { startVisitForEmpresa } from '@/src/visitas/start-visit-flow';
 import {
   getInitialVisitaState,
   loadVisitaState,
   VisitaEnCursoState,
 } from '@/src/visitas/visita-state';
-import { startVisitForEmpresa } from '@/src/visitas/start-visit-flow';
+
+import {
+  getEmpresasFavoritas,
+  toggleEmpresaFavorita,
+} from '@/src/visitas/favoritos-empresas';
 
 export default function VisitasScreen() {
   const { tecnico } = useAuth();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [searchEmpresa, setSearchEmpresa] = useState('');
+  const [empresasFavoritas, setEmpresasFavoritas,] = useState<number[]>([]);
   const [visitaState, setVisitaState] = useState<VisitaEnCursoState>(getInitialVisitaState());
   const [loadingEmpresas, setLoadingEmpresas] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,19 +45,71 @@ export default function VisitasScreen() {
     const term = searchEmpresa.trim().toLowerCase();
     const base = term
       ? clientes.filter((cliente) =>
-          [cliente.nombre, cliente.razonSocial].filter(Boolean).join(' ').toLowerCase().includes(term),
-        )
+        [cliente.nombre, cliente.razonSocial].filter(Boolean).join(' ').toLowerCase().includes(term),
+      )
       : clientes;
 
     return [...base].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [clientes, searchEmpresa]);
 
+  const hayBusqueda =
+    searchEmpresa.trim().length > 0;
+
+  const clientesFavoritos =
+    useMemo(() => {
+      if (hayBusqueda) {
+        return [];
+      }
+
+      return filteredClientes.filter(
+        (cliente) =>
+          empresasFavoritas.includes(
+            cliente.id_empresa,
+          ),
+      );
+    }, [
+      filteredClientes,
+      empresasFavoritas,
+      hayBusqueda,
+    ]);
+
+  const clientesNoFavoritos =
+    useMemo(() => {
+      if (hayBusqueda) {
+        return filteredClientes;
+      }
+
+      return filteredClientes.filter(
+        (cliente) =>
+          !empresasFavoritas.includes(
+            cliente.id_empresa,
+          ),
+      );
+    }, [
+      filteredClientes,
+      empresasFavoritas,
+      hayBusqueda,
+    ]);
+
+  async function loadFavoritos() {
+    const favoritos =
+      await getEmpresasFavoritas();
+
+    setEmpresasFavoritas(
+      favoritos,
+    );
+  }
+
   useEffect(() => {
     async function boot() {
-      await Promise.all([loadEmpresas(), hydrateVisita()]);
+      await Promise.all([
+        loadEmpresas(),
+        hydrateVisita(),
+        loadFavoritos(),
+      ]);
     }
 
-    boot();
+    void boot();
   }, []);
 
   async function hydrateVisita() {
@@ -74,12 +132,34 @@ export default function VisitasScreen() {
   async function refreshScreen() {
     try {
       setRefreshing(true);
+
       await Promise.all([
         loadEmpresas(true),
         hydrateVisita(),
+        loadFavoritos(),
       ]);
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  async function handleToggleFavorito(
+    empresaId: number,
+  ) {
+    try {
+      const nuevos =
+        await toggleEmpresaFavorita(
+          empresaId,
+        );
+
+      setEmpresasFavoritas(
+        nuevos,
+      );
+    } catch {
+      Alert.alert(
+        'Favoritos',
+        'No se pudo actualizar la empresa favorita.',
+      );
     }
   }
 
@@ -164,15 +244,96 @@ export default function VisitasScreen() {
             <Text style={styles.emptyText}>Prueba con otro nombre.</Text>
           </View>
         ) : null}
-        {filteredClientes.map((cliente) => (
-          <EmpresaCard
-            cliente={cliente}
-            key={cliente.id_empresa}
-            loading={selectingEmpresaId === cliente.id_empresa}
-            onPress={() => handleSelectEmpresa(cliente)}
-            selected={cliente.id_empresa === selectedEmpresaId}
-          />
-        ))}
+        {!hayBusqueda &&
+          clientesFavoritos.length > 0 ? (
+          <>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons
+                  color="#F5B301"
+                  name="star"
+                  size={17}
+                />
+
+                <Text style={styles.sectionTitle}>
+                  Favoritas
+                </Text>
+              </View>
+
+              <View style={styles.sectionBadge}>
+                <Text style={styles.sectionBadgeText}>
+                  {clientesFavoritos.length}
+                </Text>
+              </View>
+            </View>
+
+            {clientesFavoritos.map(
+              (cliente) => (
+                <EmpresaCard
+                  cliente={cliente}
+                  favorite
+                  key={`favorite-${cliente.id_empresa}`}
+                  loading={
+                    selectingEmpresaId ===
+                    cliente.id_empresa
+                  }
+                  onPress={() =>
+                    handleSelectEmpresa(
+                      cliente,
+                    )
+                  }
+                  onToggleFavorite={() =>
+                    handleToggleFavorito(
+                      cliente.id_empresa,
+                    )
+                  }
+                  selected={
+                    cliente.id_empresa ===
+                    selectedEmpresaId
+                  }
+                />
+              ),
+            )}
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                Todas las empresas
+              </Text>
+            </View>
+          </>
+        ) : null}
+
+        {clientesNoFavoritos.map(
+          (cliente) => (
+            <EmpresaCard
+              cliente={cliente}
+              favorite={
+                empresasFavoritas.includes(
+                  cliente.id_empresa,
+                )
+              }
+              key={cliente.id_empresa}
+              loading={
+                selectingEmpresaId ===
+                cliente.id_empresa
+              }
+              onPress={() =>
+                handleSelectEmpresa(
+                  cliente,
+                )
+              }
+              onToggleFavorite={() =>
+                handleToggleFavorito(
+                  cliente.id_empresa,
+                )
+              }
+              selected={
+                cliente.id_empresa ===
+                selectedEmpresaId
+              }
+            />
+          ),
+        )}
       </ScrollView>
     </Screen>
   );
@@ -180,13 +341,17 @@ export default function VisitasScreen() {
 
 function EmpresaCard({
   cliente,
+  favorite,
   loading,
   onPress,
+  onToggleFavorite,
   selected,
 }: {
   cliente: Cliente;
+  favorite: boolean;
   loading: boolean;
   onPress: () => void;
+  onToggleFavorite: () => void;
   selected: boolean;
 }) {
   const rutText = cliente.detalleEmpresa?.rut ? `RUT ${cliente.detalleEmpresa.rut}` : 'RUT no registrado';
@@ -204,17 +369,66 @@ function EmpresaCard({
         <View style={styles.companyIcon}>
           <Ionicons color={ridsPalette.cyanDark} name="business-outline" size={21} />
         </View>
-        {loading ? (
-          <ActivityIndicator color={ridsPalette.cyanDark} />
-        ) : selected ? (
-          <View style={styles.companyCheck}>
-            <Ionicons color={colors.white} name="checkmark" size={14} />
-          </View>
-        ) : (
-          <View style={styles.companyChevron}>
-            <Ionicons color={ridsPalette.slate} name="chevron-forward" size={17} />
-          </View>
-        )}
+        <View style={styles.companyActions}>
+          <Pressable
+            accessibilityLabel={
+              favorite
+                ? 'Quitar de favoritos'
+                : 'Agregar a favoritos'
+            }
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={(event) => {
+              event.stopPropagation();
+              onToggleFavorite();
+            }}
+            style={({ pressed }) => [
+              styles.favoriteButton,
+              favorite &&
+              styles.favoriteButtonActive,
+              pressed && {
+                opacity: 0.65,
+              },
+            ]}
+          >
+            <Ionicons
+              color={
+                favorite
+                  ? '#F5B301'
+                  : '#98A2B3'
+              }
+              name={
+                favorite
+                  ? 'star'
+                  : 'star-outline'
+              }
+              size={19}
+            />
+          </Pressable>
+
+          {loading ? (
+            <ActivityIndicator
+              color={ridsPalette.cyanDark}
+              size="small"
+            />
+          ) : selected ? (
+            <View style={styles.companyCheck}>
+              <Ionicons
+                color={colors.white}
+                name="checkmark"
+                size={14}
+              />
+            </View>
+          ) : (
+            <View style={styles.companyChevron}>
+              <Ionicons
+                color={ridsPalette.slate}
+                name="chevron-forward"
+                size={17}
+              />
+            </View>
+          )}
+        </View>
       </View>
       <View style={styles.companyCopy}>
         <Text numberOfLines={2} style={styles.companyTitle}>{cliente.nombre}</Text>
@@ -365,5 +579,60 @@ const styles = StyleSheet.create({
     color: ridsPalette.slate,
     fontSize: 13,
     marginTop: 5,
+  },
+
+  companyActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+
+  favoriteButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 11,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
+  },
+
+  favoriteButtonActive: {
+    backgroundColor: '#FFF8DD',
+  },
+
+  sectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+    marginTop: 4,
+    width: '100%',
+  },
+
+  sectionTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+
+  sectionTitle: {
+    color: ridsPalette.charcoal,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  sectionBadge: {
+    alignItems: 'center',
+    backgroundColor: '#FFF8DD',
+    borderRadius: 12,
+    minWidth: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+
+  sectionBadgeText: {
+    color: '#A87500',
+    fontSize: 11,
+    fontWeight: '900',
   },
 });
