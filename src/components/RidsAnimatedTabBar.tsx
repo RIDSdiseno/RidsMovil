@@ -173,10 +173,10 @@ export function RidsAnimatedTabBar({ descriptors, navigation, state }: BottomTab
       <BlurView
         blurReductionFactor={3}
         experimentalBlurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : 'none'}
-        intensity={58}
+        intensity={42}
         pointerEvents="none"
         style={StyleSheet.absoluteFill}
-        tint="systemThinMaterialLight"
+        tint="systemUltraThinMaterialLight"
       />
       <View pointerEvents="none" style={styles.glassTint} />
 
@@ -195,10 +195,10 @@ export function RidsAnimatedTabBar({ descriptors, navigation, state }: BottomTab
           ]}>
           <BlurView
             experimentalBlurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : 'none'}
-            intensity={38}
+            intensity={30}
             pointerEvents="none"
             style={StyleSheet.absoluteFill}
-            tint="systemMaterialLight"
+            tint="systemUltraThinMaterialLight"
           />
           <View style={styles.indicatorTint} />
         </Animated.View>
@@ -322,7 +322,7 @@ function clamp(value: number, minimum: number, maximum: number) {
 const styles = StyleSheet.create({
   shell: {
     backgroundColor: 'transparent',
-    borderColor: 'rgba(255, 255, 255, 0.94)',
+    borderColor: 'rgba(255, 255, 255, 0.58)',
     borderRadius: 26,
     borderWidth: 1,
     elevation: 12,
@@ -333,16 +333,16 @@ const styles = StyleSheet.create({
     right: 10,
     shadowColor: colors.brandDark,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.14,
     shadowRadius: 20,
   },
   glassTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(221, 247, 248, 0.08)',
+    backgroundColor: 'rgba(221, 247, 248, 0.035)',
   },
   activeIndicator: {
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    borderColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    borderColor: 'rgba(255, 255, 255, 0.68)',
     borderRadius: 20,
     borderWidth: 1,
     height: 58,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   },
   indicatorTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(45, 185, 200, 0.18)',
+    backgroundColor: 'rgba(45, 185, 200, 0.12)',
   },
   itemsRow: {
     flexDirection: 'row',
