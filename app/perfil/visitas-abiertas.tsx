@@ -118,6 +118,18 @@ export default function VisitasAbiertasScreen() {
   function pedirCancelacion(visita: VisitaPendiente) {
     if (procesando) return;
 
+    // Una visita de agenda responde a una cita comprometida con el cliente:
+    // eliminarla dejaría la agenda iniciada y sin formulario. Se completa desde
+    // el formulario o se cancela formalmente desde la agenda, igual que ya lo
+    // resuelve la tarjeta de estado actual del inicio.
+    if (visita.agendaId) {
+      Alert.alert(
+        'Visita agendada',
+        'Esta visita pertenece a una agenda y no puede eliminarse desde aquí. Tócala para continuarla y completarla, o cancélala formalmente desde la agenda.',
+      );
+      return;
+    }
+
     Alert.alert(
       'Cancelar visita',
       `Se cancelará la visita de ${visita.empresa?.nombre ?? 'esta empresa'} iniciada el ${formatFecha(visita.inicio)}. Queda registrada como cancelada y no se puede deshacer.`,
@@ -183,9 +195,9 @@ export default function VisitasAbiertasScreen() {
                   </Text>
                   <Text style={styles.detalle}>Iniciada el {formatFecha(visita.inicio)}</Text>
                   <View style={styles.etiquetaFila}>
-                    <View style={styles.etiqueta}>
-                      <Text style={styles.etiquetaTexto}>
-                        {visita.origen === 'AGENDA' ? 'De agenda' : 'Manual'}
+                    <View style={[styles.etiqueta, visita.agendaId ? styles.etiquetaAgenda : null]}>
+                      <Text style={[styles.etiquetaTexto, visita.agendaId ? styles.etiquetaTextoAgenda : null]}>
+                        {visita.agendaId ? 'De agenda · solo completar' : 'Manual'}
                       </Text>
                     </View>
                   </View>
@@ -272,6 +284,8 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   etiquetaTexto: { color: colors.brand, fontSize: 11, fontWeight: '900' },
+  etiquetaAgenda: { backgroundColor: colors.line },
+  etiquetaTextoAgenda: { color: colors.muted },
   vacio: { alignItems: 'center', gap: 8, marginTop: 60 },
   vacioTitulo: { color: colors.ink, fontSize: 17, fontWeight: '900' },
   vacioTexto: { color: colors.muted, fontSize: 14, textAlign: 'center' },
