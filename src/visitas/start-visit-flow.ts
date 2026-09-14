@@ -16,6 +16,10 @@ import {
 } from '@/src/visitas/visita-state';
 
 type StartVisitForEmpresaParams = {
+  // Visita que ya existe en el servidor y se quiere retomar (por ejemplo, una
+  // que quedó abierta). Sin esto el flujo crearía una visita nueva y quedarían
+  // dos abiertas para la misma empresa.
+  visitaIdExistente?: number | null;
   empresaId: number;
   empresaNombre: string;
   empresaRazonSocial?: string | null;
@@ -37,7 +41,8 @@ export async function startVisitForEmpresa(params: StartVisitForEmpresaParams): 
   const current = await loadVisitaState();
   const hasAgenda = typeof params.agendaId === 'number';
   const existingRoute = getResumeRoute(current);
-  let visitaId = hasAgenda && current.agendaId === params.agendaId ? current.visitaId : null;
+  let visitaId = params.visitaIdExistente
+    ?? (hasAgenda && current.agendaId === params.agendaId ? current.visitaId : null);
   let inicio = current.agendaId === params.agendaId ? current.inicio : null;
 
   if (hasAgenda) {
@@ -57,7 +62,14 @@ export async function startVisitForEmpresa(params: StartVisitForEmpresaParams): 
     return { route: existingRoute, state: current };
   }
 
-  if (!hasAgenda && current.visitaId && current.empresaId && current.empresaId !== params.empresaId && current.origen !== 'AGENDA') {
+  if (
+    !params.visitaIdExistente
+    && !hasAgenda
+    && current.visitaId
+    && current.empresaId
+    && current.empresaId !== params.empresaId
+    && current.origen !== 'AGENDA'
+  ) {
     await cancelarVisita(current.visitaId).catch(() => undefined);
   }
 
