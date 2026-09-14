@@ -48,14 +48,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
         } catch {
           await clearAgendaTrackingContext().catch(() => undefined);
         }
+        // Solo se limpia la sesión. El trabajo en curso (visita, entrega o
+        // registro de equipo) se conserva a propósito: la visita ya existe en
+        // el servidor en estado pendiente, y borrarla acá la dejaba abierta sin
+        // forma de retomarla ni cerrarla. Al volver a entrar el mismo técnico
+        // se continúa donde estaba; si entra otro, se descarta en el login.
         await Promise.all([
           clearStoredToken(),
           clearStoredRefreshToken(),
           SecureStore.deleteItemAsync(USER_KEY),
-          clearVisitaState(),
-          clearEntregaState(),
-          clearEquipoState(),
-          clearGestionarEquipoState(),
         ]).catch(() => undefined);
         invalidateCache();
         setToken(null);
@@ -105,6 +106,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isSignedIn: Boolean(token),
       async signIn(email: string, password: string) {
         const response = await loginTecnico(email.trim(), password);
+        await descartarTrabajoDeOtroTecnico(response.user);
         await setStoredToken(response.token);
         if (response.refreshToken) await setStoredRefreshToken(response.refreshToken);
         await SecureStore.setItemAsync(USER_KEY, JSON.stringify(response.user));
@@ -115,6 +117,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       },
       async signInMicrosoft(idToken: string) {
         const response = await loginMicrosoft(idToken);
+        await descartarTrabajoDeOtroTecnico(response.user);
         await setStoredToken(response.token);
         if (response.refreshToken) await setStoredRefreshToken(response.refreshToken);
         await SecureStore.setItemAsync(USER_KEY, JSON.stringify(response.user));
@@ -152,6 +155,33 @@ export function AuthProvider({ children }: PropsWithChildren) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+// El trabajo en curso ahora sobrevive a una sesión vencida, así que hay que
+// asegurarse de que no lo herede otra persona: si en este teléfono entra un
+// técnico distinto al que lo dejó, se descarta.
+async function descartarTrabajoDeOtroTecnico(user: Tecnico) {
+  const nuevoId = user.id_tecnico ?? user.id ?? null;
+
+  const previoRaw = await SecureStore.getItemAsync(USER_KEY).catch(() => null);
+  if (!previoRaw) return;
+
+  let previoId: number | null = null;
+  try {
+    const previo = JSON.parse(previoRaw) as Tecnico;
+    previoId = previo.id_tecnico ?? previo.id ?? null;
+  } catch {
+    previoId = null;
+  }
+
+  if (previoId === null || nuevoId === null || previoId === nuevoId) return;
+
+  await Promise.all([
+    clearVisitaState(),
+    clearEntregaState(),
+    clearEquipoState(),
+    clearGestionarEquipoState(),
+  ]).catch(() => undefined);
 }
 
 async function restoreAgendaTracking(user: Tecnico) {

@@ -1,7 +1,14 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 
 import { ActividadesVisita, Coordenadas, Solicitante, VisitaAsignada } from '@/src/types/api';
 
+// La visita en curso se guarda en AsyncStorage y no en SecureStore: no hay nada
+// secreto (son datos de formulario) y SecureStore tiene un límite de ~2 KB en
+// Android que este estado supera con varios solicitantes. Al superarlo la
+// escritura fallaba y la visita desaparecía a mitad de camino, dejándola
+// abierta en el servidor sin forma de retomarla. Los módulos de entregas y
+// equipos ya habían migrado por el mismo motivo.
 const VISITA_STORAGE_KEY = 'rids.visita.enCurso.v1';
 
 export type VisitaEnCursoState = {
@@ -112,8 +119,28 @@ export async function prepareAgendaVisitaState(visita: VisitaAsignada) {
   return nextState;
 }
 
+async function readRaw() {
+  const raw = await AsyncStorage.getItem(VISITA_STORAGE_KEY).catch(() => null);
+  if (raw) return raw;
+
+  // Migración puntual desde SecureStore: sin esto, una visita en curso al
+  // momento de actualizar la app se perdería, que es justo lo que se quiere
+  // evitar. Se traslada y se borra el origen para no volver a leerlo.
+  const heredado = await SecureStore.getItemAsync(VISITA_STORAGE_KEY).catch(() => null);
+  if (!heredado) return null;
+
+  try {
+    await AsyncStorage.setItem(VISITA_STORAGE_KEY, heredado);
+    await SecureStore.deleteItemAsync(VISITA_STORAGE_KEY).catch(() => undefined);
+  } catch {
+    // Si la migración falla se sigue usando el valor leído: no se pierde nada.
+  }
+
+  return heredado;
+}
+
 export async function loadVisitaState() {
-  const raw = await SecureStore.getItemAsync(VISITA_STORAGE_KEY);
+  const raw = await readRaw();
   if (!raw) return getInitialVisitaState();
 
   try {
@@ -136,9 +163,18 @@ export async function loadVisitaState() {
 }
 
 export async function saveVisitaState(state: VisitaEnCursoState) {
-  await SecureStore.setItemAsync(VISITA_STORAGE_KEY, JSON.stringify(state));
+  try {
+    await AsyncStorage.setItem(VISITA_STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    // Antes este fallo pasaba inadvertido y la visita quedaba abierta en el
+    // servidor sin rastro local. Se propaga para que la pantalla lo informe.
+    console.error('[visita] No se pudo guardar la visita en curso:', error);
+    throw new Error('No se pudo guardar el avance de la visita en este dispositivo.');
+  }
 }
 
 export async function clearVisitaState() {
-  await SecureStore.deleteItemAsync(VISITA_STORAGE_KEY);
+  await AsyncStorage.removeItem(VISITA_STORAGE_KEY).catch(() => undefined);
+  // Se limpia también el origen antiguo por si quedó algo sin migrar.
+  await SecureStore.deleteItemAsync(VISITA_STORAGE_KEY).catch(() => undefined);
 }
