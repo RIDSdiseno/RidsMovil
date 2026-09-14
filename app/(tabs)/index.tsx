@@ -1,7 +1,7 @@
 // app/(tabs)/index.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -174,10 +174,17 @@ export default function DashboardScreen() {
     }
   }, [syncTrackingStatus, tecnicoId, todayDateKey]);
 
-  useEffect(() => {
-    if (isLoading) return;
-    void loadTodayAgenda(false);
-  }, [isLoading, loadTodayAgenda]);
+  // Se recarga al recuperar el foco y no solo al montar: la pantalla de inicio
+  // es una pestaña que permanece montada, así que al volver desde el formulario
+  // de visita el efecto de montaje ya no se ejecuta y la tarjeta conservaba el
+  // estado anterior. Lee primero de la caché, de modo que el retorno es
+  // inmediato y solo consulta al servidor cuando esa copia fue invalidada.
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoading) return;
+      void loadTodayAgenda(false);
+    }, [isLoading, loadTodayAgenda]),
+  );
 
   async function iniciarRuta(visita: VisitaAsignada) {
     if (startingRouteId) return;

@@ -169,8 +169,10 @@ export function getMisVisitasAsignadasHoy(fecha?: string) {
 
 type AgendaAsignadaResponse = Awaited<ReturnType<typeof getMisVisitasAsignadasHoy>>;
 
+const AGENDA_ASIGNADA_CACHE_PREFIX = 'agenda-asignada:';
+
 function getAgendaAsignadaCacheKey(tecnicoId: number, fecha: string) {
-  return `agenda-asignada:${tecnicoId}:${fecha}`;
+  return `${AGENDA_ASIGNADA_CACHE_PREFIX}${tecnicoId}:${fecha}`;
 }
 
 export function getMisVisitasAsignadasHoyCached(tecnicoId: number, fecha: string, force = false) {
@@ -209,10 +211,20 @@ export function getVisitaAsignadaPorAgenda(agendaId: number) {
   return apiRequest<{ visita: Visita | null }>(`/auth/agenda/${agendaId}/visita`);
 }
 
-export function finalizarVisitaAsignada(agendaId: number) {
-  return apiRequest<{ visita: VisitaAsignada }>(`/auth/agenda/${agendaId}/finalizar-visita`, {
-    method: 'POST',
-  });
+export async function finalizarVisitaAsignada(agendaId: number) {
+  const response = await apiRequest<{ visita: VisitaAsignada }>(
+    `/auth/agenda/${agendaId}/finalizar-visita`,
+    { method: 'POST' },
+  );
+
+  // Cerrar la agenda cambia su estado a COMPLETADA, así que la copia en caché
+  // queda obsoleta. Se invalida acá y no en la pantalla que llama para que
+  // ningún flujo pueda olvidarlo: al guardar la visita desde el formulario, la
+  // pantalla de inicio seguía leyendo el estado anterior y mostraba "continuar
+  // visita" hasta que el técnico refrescaba a mano.
+  invalidateCache(AGENDA_ASIGNADA_CACHE_PREFIX);
+
+  return response;
 }
 
 export function registrarUbicacionTecnico(payload: RegistrarUbicacionPayload) {
