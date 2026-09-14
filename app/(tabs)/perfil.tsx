@@ -132,6 +132,13 @@ export default function PerfilScreen() {
         <HistoryButton
           backgroundColor={ridsPalette.cyanSoft}
           color={ridsPalette.cyanDark}
+          icon="alert-circle-outline"
+          onPress={() => router.push('/perfil/visitas-abiertas')}
+          title="Visitas abiertas"
+        />
+        <HistoryButton
+          backgroundColor={ridsPalette.cyanSoft}
+          color={ridsPalette.cyanDark}
           icon="pulse-outline"
           onPress={() => router.push('/perfil/diagnostico')}
           title="Diagnóstico de ubicación"

@@ -411,3 +411,16 @@ export type EquipoActor = {
   nombre: string;
   email: string | null;
 };
+
+export type VisitaPendiente = {
+  id_visita: number;
+  inicio: string;
+  origen: 'MANUAL' | 'AGENDA';
+  agendaId: number | null;
+  sucursalId: number | null;
+  direccion_visita: string | null;
+  empresa: { id_empresa: number; nombre: string; razonSocial: string | null } | null;
+  agendaEstado: string | null;
+  agendaFecha: string | null;
+  agendaHoraInicio: string | null;
+};

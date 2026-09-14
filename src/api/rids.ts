@@ -25,6 +25,7 @@ import {
   UploadSignatureResponse,
   Visita,
   VisitaAsignada,
+  VisitaPendiente,
 } from '@/src/types/api';
 
 import { cachedRequest, getCachedData, invalidateCache, setCachedData } from './cache';
@@ -225,6 +226,44 @@ export async function finalizarVisitaAsignada(agendaId: number) {
   invalidateCache(AGENDA_ASIGNADA_CACHE_PREFIX);
 
   return response;
+}
+
+type VisitasPendientesResponse = {
+  visitas: VisitaPendiente[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+};
+
+const VISITAS_PENDIENTES_CACHE_PREFIX = 'visitas-pendientes:';
+
+function getVisitasPendientesCacheKey(tecnicoId: number, page: number, limit: number) {
+  return `${VISITAS_PENDIENTES_CACHE_PREFIX}${tecnicoId}:${page}:${limit}`;
+}
+
+export function getVisitasPendientes(page = 1, limit = 20) {
+  return apiRequest<VisitasPendientesResponse>(
+    `/auth/visitas/pendientes?page=${page}&limit=${limit}`,
+  );
+}
+
+export function getVisitasPendientesCached(tecnicoId: number, page = 1, limit = 20, force = false) {
+  return cachedRequest(
+    getVisitasPendientesCacheKey(tecnicoId, page, limit),
+    () => getVisitasPendientes(page, limit),
+    { force },
+  );
+}
+
+export function getVisitasPendientesCache(tecnicoId: number, page = 1, limit = 20) {
+  return getCachedData<VisitasPendientesResponse>(getVisitasPendientesCacheKey(tecnicoId, page, limit));
+}
+
+// Cancelar o retomar una visita cambia el listado completo y corre las páginas,
+// así que se descarta todo el prefijo en vez de una sola.
+export function invalidarVisitasPendientesCache() {
+  invalidateCache(VISITAS_PENDIENTES_CACHE_PREFIX);
 }
 
 export function registrarUbicacionTecnico(payload: RegistrarUbicacionPayload) {
