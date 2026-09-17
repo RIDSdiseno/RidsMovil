@@ -114,14 +114,41 @@ export type EquipoAdicional = {
 
 export type Solicitante = {
   id_solicitante: number;
+
   id?: number;
+
   nombre: string;
-  email?: string | null;
-  rut?: string | null;
-  telefono?: string | null;
-  empresaId?: number;
-  clienteId?: number | null;
-  sucursalId?: number | null;
+
+  email?:
+  | string
+  | null;
+
+  rut?:
+  | string
+  | null;
+
+  telefono?:
+  | string
+  | null;
+
+  empresaId?:
+  number;
+
+  clienteId?:
+  | number
+  | null;
+
+  sucursalId?:
+  | number
+  | null;
+
+  empresa?: {
+    id_empresa:
+    number;
+
+    nombre:
+    string;
+  } | null;
 };
 
 export type Sucursal = {

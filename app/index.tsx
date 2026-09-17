@@ -312,21 +312,37 @@ const styles = StyleSheet.create({
   safe: {
     backgroundColor: colors.brandDark,
     flex: 1,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
+
   videoLayer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   },
+
   video: {
-    height: "100%",
-    width: "100%",
+    height: '100%',
+    width: '100%',
   },
+
   videoOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(7, 29, 53, 0.58)",
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(7, 29, 53, 0.58)',
   },
+
   loopFadeOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: colors.navy,
   },
   keyboard: {

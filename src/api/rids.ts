@@ -9,8 +9,8 @@ import {
   CrearEquipoPayload,
   CrearUsuarioPayload,
   CrearVisitaPayload,
-  Entrega,
   EmpresaFavorita,
+  Entrega,
   EnviarPdfEntregaPayload,
   Equipo,
   EquipoDetalle,
@@ -27,6 +27,14 @@ import {
   VisitaAsignada,
   VisitaPendiente,
 } from '@/src/types/api';
+
+import {
+  File,
+} from 'expo-file-system';
+
+import {
+  fetch as expoFetch,
+} from 'expo/fetch';
 
 import { cachedRequest, getCachedData, invalidateCache, setCachedData } from './cache';
 import { apiRequest, getStoredToken } from './client';
@@ -626,35 +634,177 @@ export function enviarPdfEntrega(entregaId: number, payload: EnviarPdfEntregaPay
   });
 }
 
+type NativeUploadFile = {
+  uri: string;
+  name: string;
+  type: string;
+};
+
 export async function uploadToCloudinary(
   signature: UploadSignatureResponse,
-  file: Blob,
+  file: NativeUploadFile,
   fileName: string,
 ) {
-  if (!signature.cloudName) throw new Error('cloudName no recibido');
-  if (!signature.apiKey || !signature.signature || !signature.timestamp) {
-    throw new Error('Faltan datos de firma para Cloudinary');
+
+  if (!signature.cloudName) {
+    throw new Error(
+      'cloudName no recibido',
+    );
   }
 
-  const resourceType = signature.resourceType || 'auto';
+  if (
+    !signature.apiKey ||
+    !signature.signature ||
+    !signature.timestamp
+  ) {
+    throw new Error(
+      'Faltan datos de firma para Cloudinary',
+    );
+  }
+
+  const resourceType =
+    signature.resourceType ||
+    'auto';
+
   const endpoint =
-    signature.uploadUrl && resourceType === 'auto'
-      ? signature.uploadUrl
-      : `https://api.cloudinary.com/v1_1/${signature.cloudName}/${resourceType}/upload`;
+    `https://api.cloudinary.com/v1_1/${signature.cloudName}/${resourceType}/upload`;
 
-  const formData = new FormData();
-  formData.append('file', file, fileName);
-  formData.append('api_key', signature.apiKey);
-  formData.append('timestamp', String(signature.timestamp));
-  formData.append('signature', signature.signature);
-  if (signature.folder) formData.append('folder', signature.folder);
-  if (signature.publicId) formData.append('public_id', signature.publicId);
+  /*
+   * captureRef en iOS devuelve:
+   *
+   * /private/var/mobile/...
+   *
+   * Lo normalizamos para expo-file-system.
+   */
+  const normalizedUri =
+    file.uri.startsWith(
+      'file://',
+    )
+      ? file.uri
+      : `file://${file.uri}`;
 
-  const response = await fetch(endpoint, { method: 'POST', body: formData });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || 'No se pudo subir la evidencia');
+  /*
+   * File de expo-file-system implementa
+   * un archivo real compatible con expo/fetch.
+   */
+  const expoFile =
+    new File(
+      normalizedUri,
+    );
+
+  if (
+    !expoFile.exists
+  ) {
+    throw new Error(
+      'El archivo temporal de la firma no existe.',
+    );
   }
 
-  return response.json();
+  if (
+    !expoFile.size ||
+    expoFile.size <= 0
+  ) {
+    throw new Error(
+      'El archivo temporal de la firma está vacío.',
+    );
+  }
+
+  const formData =
+    new FormData();
+
+  /*
+   * IMPORTANTE:
+   * ya no se manda el objeto
+   * { uri, name, type }.
+   *
+   * Se manda un File real.
+   */
+  formData.append(
+    'file',
+    expoFile,
+  );
+
+  formData.append(
+    'api_key',
+    signature.apiKey,
+  );
+
+  formData.append(
+    'timestamp',
+    String(
+      signature.timestamp,
+    ),
+  );
+
+  formData.append(
+    'signature',
+    signature.signature,
+  );
+
+  if (
+    signature.folder
+  ) {
+    formData.append(
+      'folder',
+      signature.folder,
+    );
+  }
+
+  if (
+    signature.publicId
+  ) {
+    formData.append(
+      'public_id',
+      signature.publicId,
+    );
+  }
+
+  let response: Response;
+
+  try {
+    /*
+     * IMPORTANTE:
+     * expoFetch, NO fetch global.
+     */
+    response =
+      await expoFetch(
+        endpoint,
+        {
+          method:
+            'POST',
+
+          body:
+            formData,
+        },
+      );
+  } catch (error) {
+    console.error(
+      '[CLOUDINARY][FETCH ERROR]',
+      error,
+    );
+
+    throw error;
+  }
+
+  const text =
+    await response.text();
+
+  if (
+    !response.ok
+  ) {
+    throw new Error(
+      text ||
+      'No se pudo subir la evidencia',
+    );
+  }
+
+  try {
+    return JSON.parse(
+      text,
+    );
+  } catch {
+    throw new Error(
+      `Cloudinary no respondió JSON: ${text}`,
+    );
+  }
 }

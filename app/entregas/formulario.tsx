@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image as RNImage, InteractionManager, PanResponder, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, InteractionManager, PanResponder, Pressable, Image as RNImage, Share, StyleSheet, Text, View } from 'react-native';
 import Svg, { Polyline } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 
@@ -184,15 +184,22 @@ export default function EntregaFormularioScreen() {
       nombreArchivo: tipo === 'pdf' ? file.name : undefined,
     });
 
-    const cloudinaryResp = await uploadToCloudinary(
-      signature,
-      {
-        name: file.name,
-        type: file.mimeType,
-        uri: file.uri,
-      } as unknown as Blob,
-      file.name,
-    );
+    const cloudinaryResp =
+      await uploadToCloudinary(
+        signature,
+        {
+          name:
+            file.name,
+
+          type:
+            file.mimeType,
+
+          uri:
+            file.uri,
+        },
+
+        file.name,
+      );
 
     const url = cloudinaryResp?.secure_url || cloudinaryResp?.url;
     const publicId = cloudinaryResp?.public_id || cloudinaryResp?.publicId;
@@ -401,15 +408,15 @@ export default function EntregaFormularioScreen() {
         <Section icon={brand === 'econnet' ? 'cube-outline' : 'hardware-chip-outline'} title={brand === 'econnet' ? 'Productos seleccionados' : 'Equipos seleccionados'}>
           {brand === 'econnet'
             ? retiroProductos.map((producto) => (
-                <InfoRow
-                  key={producto.id}
-                  label={producto.nombre}
-                  value={`Cantidad: ${producto.cantidad || '1'}${producto.serial ? ` · Serie: ${producto.serial}` : ''}`}
-                />
-              ))
+              <InfoRow
+                key={producto.id}
+                label={producto.nombre}
+                value={`Cantidad: ${producto.cantidad || '1'}${producto.serial ? ` · Serie: ${producto.serial}` : ''}`}
+              />
+            ))
             : selectedEquipos.map((equipo) => (
-                <InfoRow key={equipo.id_equipo} label={formatEquipoTitle(equipo)} value={`Serial: ${equipo.serial || 'Sin serial'}`} />
-              ))}
+              <InfoRow key={equipo.id_equipo} label={formatEquipoTitle(equipo)} value={`Serial: ${equipo.serial || 'Sin serial'}`} />
+            ))}
           <AppButton
             onPress={() => router.push({ pathname: '/entregas/retiro-equipos', params: { returnTo: 'formulario' } })}
             title={brand === 'econnet' ? 'Cambiar productos' : 'Cambiar equipos'}
@@ -507,20 +514,20 @@ export default function EntregaFormularioScreen() {
               <View style={styles.pdfEquipmentList}>
                 {brand === 'econnet'
                   ? retiroProductos.slice(0, 8).map((producto) => (
-                      <View key={producto.id} style={styles.pdfEquipmentRow}>
-                        <Text numberOfLines={1} style={styles.pdfEquipmentName}>{producto.nombre}</Text>
-                        <Text numberOfLines={1} style={styles.pdfEquipmentMeta}>
-                          Cantidad: {producto.cantidad || '1'}{producto.serial ? ` · Serie: ${producto.serial}` : ''}
-                        </Text>
-                        {producto.descripcion ? <Text numberOfLines={1} style={styles.pdfEquipmentMeta}>{producto.descripcion}</Text> : null}
-                      </View>
-                    ))
+                    <View key={producto.id} style={styles.pdfEquipmentRow}>
+                      <Text numberOfLines={1} style={styles.pdfEquipmentName}>{producto.nombre}</Text>
+                      <Text numberOfLines={1} style={styles.pdfEquipmentMeta}>
+                        Cantidad: {producto.cantidad || '1'}{producto.serial ? ` · Serie: ${producto.serial}` : ''}
+                      </Text>
+                      {producto.descripcion ? <Text numberOfLines={1} style={styles.pdfEquipmentMeta}>{producto.descripcion}</Text> : null}
+                    </View>
+                  ))
                   : selectedEquipos.slice(0, 8).map((equipo) => (
-                      <View key={equipo.id_equipo} style={styles.pdfEquipmentRow}>
-                        <Text numberOfLines={1} style={styles.pdfEquipmentName}>{formatEquipoTitle(equipo)}</Text>
-                        <Text numberOfLines={1} style={styles.pdfEquipmentMeta}>Serial: {equipo.serial || 'Sin serial'}</Text>
-                      </View>
-                    ))}
+                    <View key={equipo.id_equipo} style={styles.pdfEquipmentRow}>
+                      <Text numberOfLines={1} style={styles.pdfEquipmentName}>{formatEquipoTitle(equipo)}</Text>
+                      <Text numberOfLines={1} style={styles.pdfEquipmentMeta}>Serial: {equipo.serial || 'Sin serial'}</Text>
+                    </View>
+                  ))}
                 {(brand === 'econnet' ? retiroProductos.length : selectedEquipos.length) > 8 ? (
                   <Text style={styles.pdfEquipmentMore}>+ {(brand === 'econnet' ? retiroProductos.length : selectedEquipos.length) - 8} item(s) adicional(es)</Text>
                 ) : null}

@@ -454,6 +454,40 @@ export default function GestionarEquipoDetalleScreen() {
     );
   }
 
+  async function goIngresarTaller() {
+    if (!equipo) return;
+
+    /*
+     * La OT se generará con los datos que
+     * actualmente existen en backend.
+     *
+     * Si hay modificaciones locales sin guardar,
+     * evitamos que el usuario piense que esos
+     * cambios formarán parte del ingreso.
+     */
+    if (hasChanges) {
+      Alert.alert(
+        'Cambios sin guardar',
+        'Tienes cambios pendientes en este equipo. Guarda los cambios antes de ingresarlo a Taller.',
+        [
+          {
+            text: 'Aceptar',
+            style: 'cancel',
+          },
+        ],
+      );
+
+      return;
+    }
+
+    router.push({
+      pathname: '/equipos/ordenes-taller/ingreso',
+      params: {
+        equipoId: String(equipo.id_equipo),
+      },
+    });
+  }
+
   async function guardarCambios() {
     if (!equipo) return;
 
@@ -945,8 +979,26 @@ export default function GestionarEquipoDetalleScreen() {
       )}
 
       <View style={styles.actions}>
-        <AppButton onPress={goCambiarAsignacion} title="Cambiar asignacion" variant="secondary" />
-        <AppButton disabled={!hasChanges || !canSubmit} loading={submitting} onPress={guardarCambios} title="Guardar" />
+        <AppButton
+          onPress={goCambiarAsignacion}
+          title="Cambiar asignación"
+          variant="secondary"
+        />
+
+        <AppButton
+          disabled={submitting}
+          onPress={goIngresarTaller}
+          title="Ingresar Orden de Taller"
+          variant="secondary"
+        />
+
+        <AppButton
+          disabled={!hasChanges || !canSubmit}
+          loading={submitting}
+          onPress={guardarCambios}
+          title="Guardar"
+        />
+
         <AppButton
           disabled={submitting}
           onPress={cancelarEdicion}
